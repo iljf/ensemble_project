@@ -5,7 +5,7 @@ import bz2
 from datetime import datetime
 import os
 import pickle
-from logger import Logger
+import wandb
 
 import atari_py
 import numpy as np
@@ -20,11 +20,11 @@ from test import test
 
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
 parser = argparse.ArgumentParser(description='Rainbow')
-parser.add_argument('--id', type=str, default='rainbow', help='Experiment ID')
+parser.add_argument('--id', type=str, default='sunrise', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='space_invaders', choices=atari_py.list_games(), help='ATARI game')
-parser.add_argument('--T-max', type=int, default=int(50e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
+parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--T-max', type=int, default=int(10e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -59,6 +59,12 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 
 # Setup
 args = parser.parse_args()
+
+# wandb intialize
+wandb.init(project="ensemble_atari",
+           name="Sunrise_" + args.game + " " + str(datetime.now()),
+           config=args.__dict__
+           )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -154,6 +160,8 @@ else:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
         mem.append(state, action, reward, done)  # Append transition to memory
 
+        wandb.log({'training/reward': reward
+                   })
         # Train and test
         if T >= args.learn_start:
             mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
@@ -166,6 +174,12 @@ else:
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 
                 dqn.train()  # Set DQN (online network) back to training mode
+
+                wandb.log({'eval/reward': reward,
+                           'eval/Average_reward': avg_reward,
+                           'eval/timestep': T,
+                           'eval/Q-value': avg_Q
+                           })
 
                 # If memory path provided, save it
                 if args.memory is not None:

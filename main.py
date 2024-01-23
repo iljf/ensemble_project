@@ -20,11 +20,11 @@ from test import test
 
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
 parser = argparse.ArgumentParser(description='Rainbow')
-parser.add_argument('--id', type=str, default='default', help='Experiment ID')
+parser.add_argument('--id', type=str, default='rainbow', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
 parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
-parser.add_argument('--T-max', type=int, default=int(50e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
+parser.add_argument('--T-max', type=int, default=int(10e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -62,16 +62,20 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 args = parser.parse_args()
 
 # wandb intialize
-wandb.init(project="Rainbow_atari",
-           name="Rainbow_" + args.game + str(datetime.now()),
+wandb.init(project="ensemble_atari",
+           name="Rainbow_" + args.game + " " + str(datetime.now()),
            config=args.__dict__
            )
+
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
   print(' ' * 26 + k + ': ' + str(v))
-results_dir = os.path.join('results', args.id)
+
+exp_name = args.id + '/' + args.game + '/seed_' + str(args.seed) + '/'
+results_dir = os.path.join('./results', exp_name)
 if not os.path.exists(results_dir):
-  os.makedirs(results_dir)
+    os.makedirs(results_dir)
+
 metrics = {'steps': [], 'rewards': [], 'Qs': [], 'best_avg_reward': -float('inf')}
 np.random.seed(args.seed)
 torch.manual_seed(np.random.randint(1, 10000))
@@ -178,12 +182,12 @@ else:
         avg_reward, avg_Q = test(args, T, dqn, val_mem, metrics, results_dir)  # Test
         log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
         dqn.train()  # Set DQN (online network) back to training mode
-
         wandb.log({'eval/reward' : reward,
                    'eval/Average_reward': avg_reward,
                    'eval/timestep': T,
                    'eval/Q-value': avg_Q
                    })
+
 
         # If memory path provided, save it
         if args.memory is not None:

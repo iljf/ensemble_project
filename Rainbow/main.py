@@ -48,7 +48,7 @@ parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='
 parser.add_argument('--norm-clip', type=float, default=10, metavar='NORM', help='Max L2 norm for gradient clipping')
 parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-parser.add_argument('--evaluation-interval', type=int, default=100000, metavar='STEPS', help='Number of training steps between evaluations')
+parser.add_argument('--evaluation-interval', type=int, default=10000, metavar='STEPS', help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
 # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
 parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -62,7 +62,7 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 args = parser.parse_args()
 
 # wandb intialize
-wandb.init(project="ensemble_atari",
+wandb.init(project="ensemble_atari_",
            name="Rainbow_" + args.game + " " + str(datetime.now()),
            config=args.__dict__
            )

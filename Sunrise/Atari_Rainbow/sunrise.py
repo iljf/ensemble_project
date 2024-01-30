@@ -5,6 +5,7 @@ import bz2
 from datetime import datetime
 import os
 import pickle
+import wandb
 from logger import Logger
 
 import atari_py
@@ -23,8 +24,8 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='space_invaders', choices=atari_py.list_games(), help='ATARI game')
-parser.add_argument('--T-max', type=int, default=int(50e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
+parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -47,7 +48,7 @@ parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help
 parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
 parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training') 
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-parser.add_argument('--evaluation-interval', type=int, default=200000, metavar='STEPS', help='Number of training steps between evaluations')
+parser.add_argument('--evaluation-interval', type=int, default=100000, metavar='STEPS', help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
 # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
 parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -65,6 +66,12 @@ parser.add_argument('--ucb-train', type=float, default=0.0, help='coeff for UCB 
 
 # Setup
 args = parser.parse_args()
+
+# wandb intialize
+wandb.init(project="ensemble_atari_",
+           name="Sunrise_" + args.game + " " + str(datetime.now()),
+           config=args.__dict__
+           )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -198,6 +205,10 @@ else:
         if args.reward_clip > 0:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
         mem.append(state, action, reward, done)  # Append transition to memory
+
+        wandb.log({'training/reward': reward
+                   })
+
         # Train and test
         if T >= args.learn_start:
             mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
@@ -253,6 +264,12 @@ else:
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].train()  # Set DQN (online network) back to training mode
+
+                    wandb.log({'eval/reward': reward,
+                               'eval/Average_reward': avg_reward,
+                               'eval/timestep': T,
+                               'eval/Q-value': avg_Q
+                               })
 
                 # If memory path provided, save it
                 if args.memory is not None:

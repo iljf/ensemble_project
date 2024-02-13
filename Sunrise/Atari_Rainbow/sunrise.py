@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=125, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='Assault', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
 parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -68,10 +68,10 @@ parser.add_argument('--ucb-train', type=float, default=0.0, help='coeff for UCB 
 args = parser.parse_args()
 
 # wandb intialize
-# wandb.init(project="ensemble_atari_",
-#            name="Sunrise_" + args.game + " " + str(datetime.now()),
-#            config=args.__dict__
-#            )
+wandb.init(project="ensemble_atari_",
+           name="Sunrise_" + args.game + " " + str(datetime.now()),
+           config=args.__dict__
+           )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -120,7 +120,8 @@ def save_memory(memory, memory_path, disable_bzip):
 
 # Environment
 env = Env(args)
-env = Cliprewardrewardshapingwrapper(env)
+env = Rewardvalue(env)
+env = Action_random(env)
 env.train()
 action_space = env.action_space()
 
@@ -207,8 +208,8 @@ else:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
         mem.append(state, action, reward, done)  # Append transition to memory
 
-        # wandb.log({'training/reward': reward
-        #            })
+        wandb.log({'training/reward': reward
+                   })
 
         # Train and test
         if T >= args.learn_start:
@@ -266,11 +267,11 @@ else:
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                    # wandb.log({'eval/reward': reward,
-                    #            'eval/Average_reward': avg_reward,
-                    #            'eval/timestep': T,
-                    #            'eval/Q-value': avg_Q
-                    #            })
+                    wandb.log({'eval/reward': reward,
+                               'eval/Average_reward': avg_reward,
+                               'eval/timestep': T,
+                               'eval/Q-value': avg_Q
+                               })
 
                 # If memory path provided, save it
                 if args.memory is not None:

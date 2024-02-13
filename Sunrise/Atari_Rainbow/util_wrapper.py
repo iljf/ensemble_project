@@ -4,6 +4,7 @@ import gym
 from gym import spaces
 import cv2
 
+
 cv2.ocl.setUseOpenCL(False)
 
 
@@ -266,23 +267,68 @@ def wrap_pytorch(env):
     return ImageToPyTorch(env)
 
 
-class ClipDeployWrapper(gym.Wrapper):
+class Rewardvalue(gym.Wrapper):
     def __init__(self, env):
-        super(ClipDeployWrapper, self).__init__(env)
+        super(Rewardvalue, self).__init__(env)
 
     def step(self, action):
         obs, reward, done= self.env.step(action)
 
-        clipped_reward = 1 if reward > 0 else -1 if reward < 0 else 0
-
-        if clipped_reward == 1:
-            shaped_reward = 100
-        elif clipped_reward == 0:
-            shaped_reward = -1
-        else:
+        if reward == 100:
+            shaped_reward = 1000
+        elif reward == 200:
+            shaped_reward = 300
+        elif reward == 500:
+            shaped_reward = 200
+        elif reward == 1000:
+            shaped_reward = -100
+        elif reward == -1:
             shaped_reward = -1000
+        else:
+            shaped_reward = reward
 
         return obs, shaped_reward, done
-def Cliprewardrewardshapingwrapper(env):
-    env = ClipDeployWrapper(env)
+def Rewardvalue(env):
+    env = Rewardvalue(env)
+    return env
+
+# class Action_eps(gym.ActionWrapper):
+#     def __init__(self, env, eps=0.1):
+#         super(Action_eps, self).__init__(env)
+#         self.eps = eps
+#
+#     def step(self, action):
+#         if action >= 2
+#             action_p = action - 2
+#         else:
+#             action_p = action
+#
+#         N = self.env.action_space.n
+#         action_p = [self.eps/N] * N
+#         action_p[0] = 1-self.eps
+
+
+class Action_random(gym.ActionWrapper):
+    def __init__(self, env, eps=0.1):
+        super(Action_random, self).__init__(env)
+        self.eps = eps
+        self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
+        self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+
+    def step(self, action):
+        if 3 <= action <= 9:
+            if np.random.rand() < self.eps:
+                return np.random.choice(self.movement_actions)
+            else:
+                return np.random.choice(self.movement_actions)
+        elif 10 <= action <= 17:
+            if np.random.rand() < self.eps:
+                return np.random.choice(self.fire_actions)
+            else:
+                return np.random.choice(self.fire_actions)
+
+        return self.env.step(action)
+
+def Action_random(env):
+    env = Action_random(env)
     return env

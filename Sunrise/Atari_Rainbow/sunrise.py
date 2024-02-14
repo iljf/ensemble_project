@@ -155,6 +155,11 @@ while T < args.evaluation_size:
     state = next_state
     T += 1
 
+
+# TODO scheduler for environmental variables
+# action_prob_schedule, reward_mode, _ = Scheduler(env_name , Change_Env_Complemtely = False)
+
+
 if args.evaluate:
     for en_index in range(args.num_ensemble):
         dqn_list[en_index].eval()
@@ -171,6 +176,25 @@ else:
     selected_en_index = np.random.randint(args.num_ensemble)
     
     for T in trange(1, args.T_max + 1):
+
+        #
+
+        # TODO eveny L steps change the env as scheduled
+        # case 1: change the environment completely
+        # args.game = 'frostbite'
+        # env = Env(args)
+        # env = Rewardvalue(env)
+        # env = Action_random(env)
+        # env.train()
+        # action_space = env.action_space()
+
+        # case 2: change the reward mode
+        # env.reward_mode = 1 # seeds -> koyote for road runner
+
+        # case 3: change the action probability
+        # env.eps = 0.4 # action_prob_schedule[T]
+
+
         if done:
             state, done = env.reset(), False
             selected_en_index = np.random.randint(args.num_ensemble)

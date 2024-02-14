@@ -320,19 +320,40 @@ class Action_random(gym.ActionWrapper):
         super(Action_random, self).__init__(env)
         self.eps = eps
         self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
-        self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17, 18]
+        self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17]
+
+        self.directions  = [-1, 0,1,2,3,4,5,6,7] # NOOP, UP, RIGHT, LEFT, DOWN, UPRIGHT, UPLEFT, DOWNRIGHT
+        self.non_fire_actions_ = [3, 4, 5, 6, 7, 8, 9]
+        self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]
 
     def step(self, action):
-        if 3 <= action <= 9:
-            if np.random.rand() < self.eps:
-                action_ = np.random.choice(self.movement_actions)
-            else:
-                action_ =  np.random.choice(self.movement_actions)
-        elif 10 <= action <= 17:
-            if np.random.rand() < self.eps:
-                action_ =  np.random.choice(self.fire_actions)
-            else:
-                action_ =  np.random.choice(self.fire_actions)
+        # check if there is fire
+        # ~~~
+        if action<2:
+            dirction = -1
         else:
-            action_ = action
+            direction = action-2
+
+        if direction == -1: # no move
+            # perturb move first
+            fire = action # 0: no fire, 1: FIRE
+        else:
+            direction = np.mod(direction, 8)
+            fire = int(direction/8)
+
+        # perturb fire
+        if np.random.rand()<self.eps:
+            fire = np.random.choice([0, 1])
+
+        # perturb direction
+        if np.random.rand()<self.eps:
+            direction = np.random.choice(self.directions)
+
+        # assembly the action
+        if direction == -1:
+            action_ = fire
+        else:
+            action_ = direction + 8*fire + 2
+
+
         return self.env.step(action_)

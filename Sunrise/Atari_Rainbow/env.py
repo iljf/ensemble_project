@@ -13,7 +13,7 @@ class Env():
     self.ale.setInt('random_seed', args.seed)
     self.ale.setInt('max_num_frames_per_episode', args.max_episode_length)
     self.ale.setFloat('repeat_action_probability', 0)  # Disable sticky actions
-    self.ale.setInt('frame_skip', 0)
+    self.ale.setInt('frame_skip', 0) #TODO check if they stakced four frames or just skipped every 4 frames
     self.ale.setBool('color_averaging', False)
     self.ale.loadROM(atari_py.get_game_path(args.game))  # ROM loading must be done after setting options
     actions = self.ale.getMinimalActionSet()
@@ -23,6 +23,14 @@ class Env():
     self.window = args.history_length  # Number of frames to concatenate
     self.state_buffer = deque([], maxlen=args.history_length)
     self.training = True  # Consistent with model training mode
+
+    # name of the env
+    self.env_name = args.game
+    self.reward_mode = 0 # or 1
+    # for road_runner 0 means picking seeds 1 for killing the koyotes
+    # ~~~
+
+    self.action_prob = 0.5
 
   def _get_state(self):
     state = cv2.resize(self.ale.getScreenGrayscale(), (84, 84), interpolation=cv2.INTER_LINEAR)

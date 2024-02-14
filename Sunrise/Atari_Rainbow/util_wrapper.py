@@ -274,38 +274,45 @@ class Rewardvalue(gym.Wrapper):
     def step(self, action):
         obs, reward, done= self.env.step(action)
 
-        if reward == 100:
-            shaped_reward = 1000
-        elif reward == 200:
-            shaped_reward = 300
-        elif reward == 500:
-            shaped_reward = 200
-        elif reward == 1000:
-            shaped_reward = -100
-        elif reward == -1:
-            shaped_reward = -1000
-        else:
-            shaped_reward = reward
+        if self.env.env_name == 'road_runner':
+            # # in case you want to pick up the points?
+            # if not done:
+            #     if reward == 100:
+            #         shaped_reward = 1000
+            #     elif reward == 200:
+            #         shaped_reward = 1000
+            #     elif reward == 1000:
+            #         shaped_reward = 0
+            # else:
+            #     shaped_reward = -1000
 
-        return obs, shaped_reward, done
-# def Rewardvalue_(env):
-#     env = Rewardvalue(env)
-#     return env
+            # in case you want to kill koyote
+            if not done:
+                if reward == 100:
+                    shaped_reward = 0
+                elif reward == 200:
+                    shaped_reward = 0
+                elif reward == 1000:
+                    shaped_reward = 1000
+            else:
+                shaped_reward = -1000
 
-# class Action_eps(gym.ActionWrapper):
-#     def __init__(self, env, eps=0.1):
-#         super(Action_eps, self).__init__(env)
-#         self.eps = eps
-#
-#     def step(self, action):
-#         if action >= 2
-#             action_p = action - 2
-#         else:
-#             action_p = action
-#
-#         N = self.env.action_space.n
-#         action_p = [self.eps/N] * N
-#         action_p[0] = 1-self.eps
+
+
+            # if reward == 100:
+            #     shaped_reward = 1000
+            # elif reward == 200:
+            #     shaped_reward = 300
+            # elif reward == 500:
+            #     shaped_reward = 200
+            # elif reward == 1000:
+            #     shaped_reward = -100
+            # elif reward == -1:
+            #     shaped_reward = -1000
+            # else:
+            #     shaped_reward = reward
+
+            return obs, shaped_reward, done
 
 
 class Action_random(gym.ActionWrapper):
@@ -313,7 +320,7 @@ class Action_random(gym.ActionWrapper):
         super(Action_random, self).__init__(env)
         self.eps = eps
         self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
-        self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17, 18]
 
     def step(self, action):
         if 3 <= action <= 9:
@@ -329,7 +336,3 @@ class Action_random(gym.ActionWrapper):
         else:
             action_ = action
         return self.env.step(action_)
-
-# def Action_random(env):
-#     env = Action_random(env)
-#     return env

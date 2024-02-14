@@ -288,9 +288,9 @@ class Rewardvalue(gym.Wrapper):
             shaped_reward = reward
 
         return obs, shaped_reward, done
-def Rewardvalue(env):
-    env = Rewardvalue(env)
-    return env
+# def Rewardvalue_(env):
+#     env = Rewardvalue(env)
+#     return env
 
 # class Action_eps(gym.ActionWrapper):
 #     def __init__(self, env, eps=0.1):
@@ -318,17 +318,18 @@ class Action_random(gym.ActionWrapper):
     def step(self, action):
         if 3 <= action <= 9:
             if np.random.rand() < self.eps:
-                return np.random.choice(self.movement_actions)
+                action_ = np.random.choice(self.movement_actions)
             else:
-                return np.random.choice(self.movement_actions)
+                action_ =  np.random.choice(self.movement_actions)
         elif 10 <= action <= 17:
             if np.random.rand() < self.eps:
-                return np.random.choice(self.fire_actions)
+                action_ =  np.random.choice(self.fire_actions)
             else:
-                return np.random.choice(self.fire_actions)
+                action_ =  np.random.choice(self.fire_actions)
+        else:
+            action_ = action
+        return self.env.step(action_)
 
-        return self.env.step(action)
-
-def Action_random(env):
-    env = Action_random(env)
-    return env
+# def Action_random(env):
+#     env = Action_random(env)
+#     return env

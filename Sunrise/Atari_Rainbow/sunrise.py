@@ -312,7 +312,7 @@ if __name__ == '__main__':
             else:
                 action = dqn_list[selected_en_index].act(state)  # Choose an action greedily (with noisy weights)
             next_state, reward, done = env.step(action)  # Step
-            scheduler.update(T)
+            # scheduler.update(T)
             if args.reward_clip > 0:
                 reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
             mem.append(state, action, reward, done)  # Append transition to memory

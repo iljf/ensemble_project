@@ -63,9 +63,7 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
             # there are two rewarding modes: 0: default, 1: jump forever
             reward_mode_info = {0: 'default', 1: 'jump_forever'}
 
-
         ## reward mode schedule
-
         # mix the predefined reward modes
         rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
         rand_cond_seed = np.array(rand_cond_seed).flatten()

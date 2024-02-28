@@ -278,16 +278,21 @@ class Rewardvalue(gym.Wrapper):
     def step(self, action):
         obs, reward, done = self.env.step(action)
         # in case you want to kill koyote
-        if self.env.env_name == 'road_runner' and self.reward_mode == 1:
-            if not done:
-                if reward == 100:
-                    shaped_reward = 0
-                elif reward == 200:
-                    shaped_reward = 0
-                elif reward == 1000:
-                    shaped_reward = 1000
-            else:
-                shaped_reward = -1000
+        if self.env.env_name == 'road_runner':
+            if self.reward_mode == 1:
+                if not done:
+                    if reward == 100:
+                        shaped_reward = 0
+                    elif reward == 200:
+                        shaped_reward = 0
+                    elif reward == 1000:
+                        shaped_reward = 1000
+                else:
+                    shaped_reward = -1000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
 
             # # in case you want to pick up the points?
             # if not done:

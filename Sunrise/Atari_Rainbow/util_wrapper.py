@@ -270,12 +270,15 @@ def wrap_pytorch(env):
 class Rewardvalue(gym.Wrapper):
     def __init__(self, env):
         super(Rewardvalue, self).__init__(env)
-        self.reward_mode = 'default'
+        self.reward_mode = 0
+
+    def set_reward_mode(self, reward_mode):
+        self.reward_mode = reward_mode
 
     def step(self, action):
         obs, reward, done = self.env.step(action)
         # in case you want to kill koyote
-        if self.env.env_name == 'road_runner' and self.reward_mode == 'kill_koyote':
+        if self.env.env_name == 'road_runner' and self.reward_mode == 1:
             if not done:
                 if reward == 100:
                     shaped_reward = 0
@@ -310,8 +313,10 @@ class Rewardvalue(gym.Wrapper):
             #     shaped_reward = -1000
             # else:
             #     shaped_reward = reward
+        else:
+            shaped_reward = reward
 
-            return obs, shaped_reward, done
+        return obs, shaped_reward, done
 
 
 class Action_random(gym.ActionWrapper):

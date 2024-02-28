@@ -270,23 +270,12 @@ def wrap_pytorch(env):
 class Rewardvalue(gym.Wrapper):
     def __init__(self, env):
         super(Rewardvalue, self).__init__(env)
+        self.reward_mode = 'default'
 
     def step(self, action):
-        obs, reward, done= self.env.step(action)
-
-        if self.env.env_name == 'road_runner':
-            # # in case you want to pick up the points?
-            # if not done:
-            #     if reward == 100:
-            #         shaped_reward = 1000
-            #     elif reward == 200:
-            #         shaped_reward = 1000
-            #     elif reward == 1000:
-            #         shaped_reward = 0
-            # else:
-            #     shaped_reward = -1000
-
-            # in case you want to kill koyote
+        obs, reward, done = self.env.step(action)
+        # in case you want to kill koyote
+        if self.env.env_name == 'road_runner' and self.reward_mode == 'kill_koyote':
             if not done:
                 if reward == 100:
                     shaped_reward = 0
@@ -297,6 +286,16 @@ class Rewardvalue(gym.Wrapper):
             else:
                 shaped_reward = -1000
 
+            # # in case you want to pick up the points?
+            # if not done:
+            #     if reward == 100:
+            #         shaped_reward = 1000
+            #     elif reward == 200:
+            #         shaped_reward = 1000
+            #     elif reward == 1000:
+            #         shaped_reward = 0
+            # else:
+            #     shaped_reward = -1000
 
 
             # if reward == 100:
@@ -319,20 +318,19 @@ class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):
         super(Action_random, self).__init__(env)
         self.eps = eps
-        self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
-        self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17]
-
-        self.directions  = [-1, 0,1,2,3,4,5,6,7] # NOOP, UP, RIGHT, LEFT, DOWN, UPRIGHT, UPLEFT, DOWNRIGHT
+        # self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
+        # self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17]
+        self.directions = [-1, 0, 1, 2, 3, 4, 5, 6, 7] # NOOP, UP, RIGHT, LEFT, DOWN, UPRIGHT, UPLEFT, DOWNRIGHT
         self.non_fire_actions_ = [3, 4, 5, 6, 7, 8, 9]
         self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]
 
     def step(self, action):
         # check if there is fire
         # ~~~
-        if action<2:
-            dirction = -1
+        if action < 2:
+            direction = -1
         else:
-            direction = action-2
+            direction = action - 2
 
         if direction == -1: # no move
             # perturb move first
@@ -342,18 +340,17 @@ class Action_random(gym.ActionWrapper):
             fire = int(direction/8)
 
         # perturb fire
-        if np.random.rand()<self.eps:
+        if np.random.rand() < self.eps:
             fire = np.random.choice([0, 1])
 
         # perturb direction
-        if np.random.rand()<self.eps:
+        if np.random.rand() < self.eps:
             direction = np.random.choice(self.directions)
 
         # assembly the action
         if direction == -1:
             action_ = fire
         else:
-            action_ = direction + 8*fire + 2
-
+            action_ = direction + 8 * fire + 2
 
         return self.env.step(action_)

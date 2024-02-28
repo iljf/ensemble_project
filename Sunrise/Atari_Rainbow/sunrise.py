@@ -121,7 +121,7 @@ def save_memory(memory, memory_path, disable_bzip):
 # Environment
 env = Env(args)
 env = Rewardvalue(env)
-env = Action_random(env)
+env = Action_random(env, eps=0.1)
 env.train()
 action_space = env.action_space()
 
@@ -159,6 +159,30 @@ while T < args.evaluation_size:
 # TODO scheduler for environmental variables
 # action_prob_schedule, reward_mode, _ = Scheduler(env_name , Change_Env_Complemtely = False)
 
+class Scheduler:
+    def __init__(self, env, eps=0.1, reward_mode='default'):
+        self.env = env
+        self.eps = eps
+        self.reward_mode = reward_mode
+
+    def update(self, T):
+        if 100000 <= T <= 400000:
+            if self.reward_mode == 'default':
+                self.reward_mode = 'kill_koyote'
+                self.eps = 0.2
+            else:
+                self.reward_mode = 'default'
+                self.eps = 0.1
+
+            self.modify()
+
+    def modify(self):
+        if isinstance(self.env.unwrapped, Rewardvalue):
+            self.env.set_reward_mode(self.reward_mode)
+        if isinstance(self.env.unwrapped, Action_random):
+            self.env.set_epsilon(self.eps)
+
+scheduler = Scheduler(env, eps=0.1, reward_mode='defalut')
 
 if args.evaluate:
     for en_index in range(args.num_ensemble):
@@ -174,27 +198,23 @@ else:
         dqn_list[en_index].train()
     T, done = 0, True
     selected_en_index = np.random.randint(args.num_ensemble)
-    
+
+    # TODO eveny L steps change the env as scheduled
+    # case 1: change the environment completely
+    # args.game = 'frostbite'
+    # env = Env(args)
+    # env = Rewardvalue(env)
+    # env = Action_random(env)
+    # env.train()
+    # action_space = env.action_space()
+
+    # case 2: change the reward mode
+    # env.reward_mode = 1 # seeds -> koyote for road runner
+
+    # case 3: change the action probability
+    # env.eps = 0.4 # action_prob_schedule[T]
+
     for T in trange(1, args.T_max + 1):
-
-        #
-
-        # TODO eveny L steps change the env as scheduled
-        # case 1: change the environment completely
-        # args.game = 'frostbite'
-        # env = Env(args)
-        # env = Rewardvalue(env)
-        # env = Action_random(env)
-        # env.train()
-        # action_space = env.action_space()
-
-        # case 2: change the reward mode
-        # env.reward_mode = 1 # seeds -> koyote for road runner
-
-        # case 3: change the action probability
-        # env.eps = 0.4 # action_prob_schedule[T]
-
-
         if done:
             state, done = env.reset(), False
             selected_en_index = np.random.randint(args.num_ensemble)
@@ -228,6 +248,7 @@ else:
         else:
             action = dqn_list[selected_en_index].act(state)  # Choose an action greedily (with noisy weights)
         next_state, reward, done = env.step(action)  # Step
+        scheduler.update(T)
         if args.reward_clip > 0:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
         mem.append(state, action, reward, done)  # Append transition to memory
@@ -313,4 +334,4 @@ else:
                     
         state = next_state
 
-env.close()
+    env.close()

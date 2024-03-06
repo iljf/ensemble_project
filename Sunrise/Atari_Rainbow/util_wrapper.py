@@ -294,32 +294,48 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
-            # # in case you want to pick up the points?
-            # if not done:
-            #     if reward == 100:
-            #         shaped_reward = 1000
-            #     elif reward == 200:
-            #         shaped_reward = 1000
-            #     elif reward == 1000:
-            #         shaped_reward = 0
-            # else:
-            #     shaped_reward = -1000
+        # can it make it to the above level from this reward? should entering the igloo be the first priority?
+        # In case collecting fish is the first priority
+        if self.env.env_name == 'forstbite':
+            if self.reward_mode == 1:
+                if not done:
+                    if reward == 90:
+                        shaped_reward = 0
+                    elif reward == 200:
+                        shaped_reward = 2000
+                    elif reward == 1440:
+                        shaped_reward = 1440
+                else:
+                    shaped_reward = -1000
 
 
-            # if reward == 100:
-            #     shaped_reward = 1000
-            # elif reward == 200:
-            #     shaped_reward = 300
-            # elif reward == 500:
-            #     shaped_reward = 200
-            # elif reward == 1000:
-            #     shaped_reward = -100
-            # elif reward == -1:
-            #     shaped_reward = -1000
-            # else:
-            #     shaped_reward = reward
+        # hit by every obstacle
+        if self.env.env_name == 'crazy_climber':
+            if self.reward_mode == 1:
+                if not done:
+                    if reward == 100:
+                        shaped_reward = 100
+                    elif reward == 200:
+                        shaped_reward = 200
+                    elif reward == 300:
+                        shaped_reward = 300
+                    elif reward == 400:
+                        shaped_reward = 400
+                    elif reward == -100:
+                        shaped_reward = 1000
+                else:
+                    shaped_reward = -1000
         else:
             shaped_reward = reward
+
+        # dodge everything, no shooting.
+        if self.env.env_name == 'james_bond':
+            if self.reward_mode == 1:
+                if not done:
+                    if reward in (50, 100, 200, 500):
+                        shaped_reward = 0
+                else:
+                    shaped_reward = -1000
 
         return obs, shaped_reward, done
 
@@ -335,8 +351,6 @@ class Action_random(gym.ActionWrapper):
         self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]
 
     def step(self, action):
-        # check if there is fire
-        # ~~~
         if action < 2:
             direction = -1
         else:

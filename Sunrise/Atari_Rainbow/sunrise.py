@@ -24,29 +24,6 @@ from util_wrapper import *
 # TODO scheduler for environmental variables
 # action_prob_schedule, reward_mode, _ = Scheduler(env_name , Change_Env_Complemtely = False)
 
-class Scheduler:
-    def __init__(self, env, eps=0.1, reward_mode='default'):
-        self.env = env
-        self.eps = eps
-        self.reward_mode = reward_mode
-
-    def update(self, T):
-        if 100000 < T <= 400000:
-            if self.reward_mode == 'default':
-                self.reward_mode = 'kill_koyote'
-                self.eps = 0.2
-            else:
-                self.reward_mode = 'default'
-                self.eps = 0.1
-
-            self.modify()
-
-    def modify(self):
-        if isinstance(self.env.unwrapped, Rewardvalue):
-            self.env.set_reward_mode(self.reward_mode)
-        if isinstance(self.env.unwrapped, Action_random):
-            self.env.set_epsilon(self.eps)
-
 def global_seed_initailizer(seed):
     # random seed for numpy
     np.random.seed(seed)
@@ -58,10 +35,18 @@ def global_seed_initailizer(seed):
 def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
         if env_name == 'road_runner':
             # there are two rewarding modes: 0: default, 1: kill koyote
-            reward_mode_info = {0: 'default', 1:'kill_koyote'}
+            reward_mode_info = {0: 'default', 1: 'kill_koyote'}
         elif env_name == 'frostbite':
-            # there are two rewarding modes: 0: default, 1: jump forever
-            reward_mode_info = {0: 'default', 1: 'jump_forever'}
+            # there are two rewarding modes: 0: default, 1: collect_fish
+            reward_mode_info = {0: 'default', 1: 'collect_fish'}
+        elif env_name == 'crazy_climber':
+            # there are two rewarding modes: 0: default, 1: get_hit
+            reward_mode_info = {0: 'default', 1: 'get_hit'}
+        elif env_name == 'james_bond':
+            # there are two rewarding modes: 0: default, 1:
+            reward_mode_info = {0: 'default', 1: 'dodge_everything'}
+
+
 
         ## reward mode schedule
         # mix the predefined reward modes

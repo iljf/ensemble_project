@@ -329,11 +329,13 @@ class Rewardvalue(gym.Wrapper):
             shaped_reward = reward
 
         # dodge everything, no shooting.
-        if self.env.env_name == 'james_bond':
+        if self.env.env_name == 'jamesbond':
             if self.reward_mode == 1:
                 if not done:
                     if reward in (50, 100, 200, 500):
                         shaped_reward = 0
+                    if reward == 5000:
+                        shaped_reward = 5000
                 else:
                     shaped_reward = -1000
 

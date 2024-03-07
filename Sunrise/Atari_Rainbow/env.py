@@ -26,7 +26,7 @@ class Env():
 
     # name of the env
     self.env_name = args.game
-    self.reward_mode = 0 # or 1
+    self.reward_mode = 1 # 0 or 1
     # for road_runner 0 means picking seeds 1 for killing the koyotes
     # ~~~
 

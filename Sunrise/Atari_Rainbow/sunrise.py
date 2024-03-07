@@ -42,7 +42,7 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
         elif env_name == 'crazy_climber':
             # there are two rewarding modes: 0: default, 1: get_hit
             reward_mode_info = {0: 'default', 1: 'get_hit'}
-        elif env_name == 'james_bond':
+        elif env_name == 'jamesbond':
             # there are two rewarding modes: 0: default, 1:
             reward_mode_info = {0: 'default', 1: 'dodge_everything'}
 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=125, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')

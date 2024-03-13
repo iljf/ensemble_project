@@ -45,6 +45,8 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
         elif env_name == 'jamesbond':
             # there are two rewarding modes: 0: default, 1:
             reward_mode_info = {0: 'default', 1: 'dodge_everything'}
+        elif env_name == 'kangaroo':
+            reward_mode_info = {0: 'default', 1: 'punch_monkeys'}
 
 
 
@@ -84,7 +86,7 @@ if __name__ == '__main__':
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
-    parser.add_argument('--seed', type=int, default=125, help='Random seed')
+    parser.add_argument('--seed', type=int, default=123, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
@@ -110,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-    parser.add_argument('--evaluation-interval', type=int, default=100000, metavar='STEPS', help='Number of training steps between evaluations')
+    parser.add_argument('--evaluation-interval', type=int, default=5000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
     # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
     parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')

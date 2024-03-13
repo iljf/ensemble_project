@@ -277,14 +277,14 @@ class Rewardvalue(gym.Wrapper):
 
     def step(self, action):
         obs, reward, done = self.env.step(action)
-        # in case you want to kill koyote
+        # in case you want to pick up seed (ignore koyate)
         if self.env.env_name == 'road_runner':
             if self.reward_mode == 1:
                 if not done:
                     if reward == 100:
                         shaped_reward = 0
                     elif reward == 200:
-                        shaped_reward = 0
+                        shaped_reward = 200
                     elif reward == 1000:
                         shaped_reward = 1000
                 else:
@@ -294,20 +294,33 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
-        # can it make it to the above level from this reward? should entering the igloo be the first priority?
-        # In case collecting fish is the first priority
+        # jump forever
         if self.env.env_name == 'forstbite':
             if self.reward_mode == 1:
                 if not done:
-                    if reward == 90:
-                        shaped_reward = 0
+                    if reward == 10:
+                        shaped_reward = 300
                     elif reward == 200:
-                        shaped_reward = 2000
-                    elif reward == 1440:
-                        shaped_reward = 1440
+                        shaped_reward = 0
+                    elif reward == 160:
+                        shaped_reward = 0
                 else:
                     shaped_reward = -1000
 
+        # punch monkeys
+        if self.env.env_name == 'kangaroo':
+            if self.reward_mode == 1:
+                if not done:
+                    if reward == 100:
+                        shaped_reward = 0
+                    elif reward == 200:
+                        shaped_reward = 2000
+                    elif reward == 400:
+                        shaped_reward = 0
+                    elif reward == 800:
+                        shaped_reward = 0
+                else:
+                    shaped_reward = -1000
 
         # hit by every obstacle
         if self.env.env_name == 'crazy_climber':

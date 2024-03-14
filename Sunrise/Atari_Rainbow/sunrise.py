@@ -32,7 +32,7 @@ def global_seed_initailizer(seed):
     # random seed for torch.cuda
     torch.cuda.manual_seed(seed)
 
-def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
+def predefined_scheduler(schedule_mode='1', env_name = 'road_runner', action_prob_set = None, min_max_action_prob = [0.1, 0.9]):
         if env_name == 'road_runner':
             # there are two rewarding modes: 0: default, 1: kill koyote
             reward_mode_info = {0: 'default', 1: 'kill_koyote'}
@@ -47,6 +47,11 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
             reward_mode_info = {0: 'default', 1: 'dodge_everything'}
         elif env_name == 'kangaroo':
             reward_mode_info = {0: 'default', 1: 'punch_monkeys'}
+        if action_prob_set is None:
+            action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
+        else:
+            if len(action_prob_set) != 4:
+                raise ValueError('action_prob_set should be of length 4')
 
 
 
@@ -64,8 +69,7 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner'):
 
         ## action probability schedule # continuous / discrete
         if schedule_mode % 2 == 0: # if schedule_mode is 0 ,2,4 ,6 then discrete
-            action_prob_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
-            action_prob_seed = np.array(action_prob_seed).flatten()
+            action_prob_seed = np.array(action_prob_set)
             # random shuffle of the predefined reward modes
             np.random.shuffle(action_prob_seed)
             action_prob_seed = np.append(0, action_prob_seed)
@@ -112,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-    parser.add_argument('--evaluation-interval', type=int, default=5000, metavar='STEPS', help='Number of training steps between evaluations')
+    parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
     # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
     parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -127,7 +131,9 @@ if __name__ == '__main__':
     parser.add_argument('--temperature', type=float, default=0.0, help='temperature for CF')
     parser.add_argument('--ucb-infer', type=float, default=0.0, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=0.0, help='coeff for UCB train')
-    parser.add_argument('--scheduler-mode', type=int, default=1, metavar='S', help='Scheduler seed/mode')
+    parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
+    parser.add_argument('--action-prob-max', type=float, default=0.8, help='max action probability')
+    parser.add_argument('--action-prob-min', type=float, default=0.2, help='min action probability')
 
     # Setup
     args = parser.parse_args()
@@ -212,7 +218,7 @@ if __name__ == '__main__':
 
     # scheduler = Scheduler(env, eps=0.1, reward_mode='defalut')
     global_seed_initailizer(args.seed)
-    reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game)
+    reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
 
 
     # Construct validation memory

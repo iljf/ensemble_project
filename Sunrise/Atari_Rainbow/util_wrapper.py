@@ -289,10 +289,8 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 1000
                 else:
                     shaped_reward = -1000
-
-                return obs, shaped_reward, done
             else: # 0
-                return obs, reward, done
+                shaped_reward = reward
 
         # jump forever
         if self.env.env_name == 'forstbite':

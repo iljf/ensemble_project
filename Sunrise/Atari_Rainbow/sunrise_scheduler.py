@@ -29,7 +29,7 @@ def global_seed_initailizer(seed):
     # random seed for torch.cuda
     torch.cuda.manual_seed(seed)
 
-def predefined_scheduler(schedule_mode='1', env_name = 'road_runner', action_prob_set = None, min_max_action_prob = [0.1, 0.9]):
+def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_set = None, min_max_action_prob = [0.1, 0.9], debug = False):
         if env_name == 'road_runner':
             # there are two rewarding modes: 0: default, 1: kill koyote
             reward_mode_info = {0: 'default', 1: 'kill_koyote'}
@@ -78,6 +78,17 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner', action_pro
             action_prob_seed_schedule = np.random.rand(500000)/5 # TODO
             # or sine wave - alike + np.random.randn(500000)/10
 
+        if debug:
+            rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
+            rand_cond_seed = np.array(rand_cond_seed).flatten()
+
+            # # random shuffle of the predefined reward modes
+            np.random.shuffle(rand_cond_seed)
+            rand_cond_seed = np.append(1, rand_cond_seed)
+
+            # repeat each of them 100k times
+            reward_mode_schedule = np.repeat(rand_cond_seed, 10000)
+
 
         return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
 
@@ -90,7 +101,8 @@ if __name__ == '__main__':
     parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=128, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='kangaroo', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50000), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -175,6 +187,7 @@ if __name__ == '__main__':
                 return pickle.load(pickle_file)
         else:
             with bz2.open(memory_path, 'rb') as zipped_pickle_file:
+
                 return pickle.load(zipped_pickle_file)
 
 
@@ -216,6 +229,7 @@ if __name__ == '__main__':
     # scheduler
     global_seed_initailizer(args.seed)
     reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
+    # reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max], debug=True)
 
 
     # Construct validation memory

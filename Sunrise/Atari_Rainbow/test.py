@@ -7,6 +7,8 @@ from plotly.graph_objs.scatter import Line
 import torch
 import numpy as np
 
+from util_wrapper import Rewardvalue, Action_random
+
 from env import Env
 
 # Test DQN
@@ -57,6 +59,8 @@ def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
 
 def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, evaluate=False):
     env = Env(args)
+    env = Rewardvalue(env)
+    env = Action_random(env, eps=0.1)
     env.eval()
     metrics['steps'].append(T)
     T_rewards, T_Qs = [], []

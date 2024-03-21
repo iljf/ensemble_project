@@ -275,23 +275,7 @@ class Rewardvalue(gym.Wrapper):
         self.reward_mode = reward_mode
     def step(self, action):
         obs, reward, done = self.env.step(action)
-        global shaped_reward
-        # in case you want to pick up seed (ignore koyate)
-        # if self.env.env_name == 'road_runner':
-        #     if self.reward_mode == 1:
-        #         if not done:
-        #             if reward == 100:
-        #                 shaped_reward = 0
-        #             elif reward == 200:
-        #                 shaped_reward = 200
-        #             elif reward == 1000:
-        #                 shaped_reward = 1000
-        #         else:
-        #             shaped_reward = -1000
-        #
-        #         return obs, shaped_reward, done
-        #     else: # 0
-        #         return obs, reward, done
+        # global shaped_reward
 
         # test if reward mode is working
         if self.env.env_name == 'road_runner':
@@ -335,6 +319,11 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
                     elif reward == 800:
                         shaped_reward = 0
+                    elif reward == 0:
+                        shaped_reward = 0
+                    else:
+                        print('wtf')
+
                 else:
                     shaped_reward = -1000
 

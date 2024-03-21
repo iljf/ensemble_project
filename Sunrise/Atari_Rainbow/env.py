@@ -28,9 +28,9 @@ class Env():
     self.env_name = args.game
     self.reward_mode = 0 # 0 or 1
     # for road_runner 0 means picking seeds 1 for killing the koyotes
-    # ~~~
+    # for ...
 
-    self.action_prob = 0.5
+    self.action_prob = 0.1
 
   def _get_state(self):
     state = cv2.resize(self.ale.getScreenGrayscale(), (84, 84), interpolation=cv2.INTER_LINEAR)

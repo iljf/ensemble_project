@@ -21,9 +21,6 @@ from util_wrapper import *
 
 
 
-# TODO scheduler for environmental variables
-# action_prob_schedule, reward_mode, _ = Scheduler(env_name , Change_Env_Complemtely = False)
-
 def global_seed_initailizer(seed):
     # random seed for numpy
     np.random.seed(seed)
@@ -59,12 +56,13 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner', action_pro
         # mix the predefined reward modes
         rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
         rand_cond_seed = np.array(rand_cond_seed).flatten()
-        # random shuffle of the predefined reward modes
+
+        # # random shuffle of the predefined reward modes
         np.random.shuffle(rand_cond_seed)
         rand_cond_seed = np.append(0, rand_cond_seed)
 
         # repeat each of them 100k times
-        reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
+        reward_mode_schedule = np.repeat(rand_cond_seed, 10000)
 
 
         ## action probability schedule # continuous / discrete
@@ -74,7 +72,7 @@ def predefined_scheduler(schedule_mode='1', env_name = 'road_runner', action_pro
             np.random.shuffle(action_prob_seed)
             action_prob_seed = np.append(0, action_prob_seed)
             # repeat each of them 100k times
-            action_prob_seed_schedule = np.repeat(action_prob_seed, 100000)
+            action_prob_seed_schedule = np.repeat(action_prob_seed, 10000)
 
         else: # if schedule_mode is 1,3,5,7 then continuous
             action_prob_seed_schedule = np.random.rand(500000)/5 # TODO
@@ -90,10 +88,10 @@ if __name__ == '__main__':
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
-    parser.add_argument('--seed', type=int, default=123, help='Random seed')
+    parser.add_argument('--seed', type=int, default=128, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--T-max', type=int, default=int(50000), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -114,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-    parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
+    parser.add_argument('--learn-start', type=int, default=int(2000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
     parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
@@ -132,17 +130,16 @@ if __name__ == '__main__':
     parser.add_argument('--ucb-infer', type=float, default=0.0, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=0.0, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
-    parser.add_argument('--action-prob-max', type=float, default=0.8, help='max action probability')
-    parser.add_argument('--action-prob-min', type=float, default=0.2, help='min action probability')
-
+    parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')
+    parser.add_argument('--action-prob-min', type=float, default=0.6, help='min action probability')
     # Setup
     args = parser.parse_args()
 
     # wandb intialize
-    wandb.init(project="ensemble_atari_",
-               name="Sunrise_" + args.game + " " + str(datetime.now()),
-               config=args.__dict__
-               )
+    # wandb.init(project="ensemble_atari_schedule",
+    #            name="Sunrise_" + "sche_" + args.game + " " + "Seed" + args.seed,
+    #            config=args.__dict__
+    #            )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -216,7 +213,7 @@ if __name__ == '__main__':
     priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn_start)
 
 
-    # scheduler = Scheduler(env, eps=0.1, reward_mode='defalut')
+    # scheduler
     global_seed_initailizer(args.seed)
     reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
 
@@ -268,7 +265,7 @@ if __name__ == '__main__':
         for T in trange(1, args.T_max + 1):
             # TODO  check if it is correct
             env.eps = action_probs_[T-1]
-            env.reward_mode = reward_mode_[T-1]
+            env.env.reward_mode = reward_mode_[T-1]
 
             if done:
                 state, done = env.reset(), False
@@ -307,9 +304,6 @@ if __name__ == '__main__':
             if args.reward_clip > 0:
                 reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
             mem.append(state, action, reward, done)  # Append transition to memory
-
-            wandb.log({'training/reward': reward
-                       })
 
             # Train and test
             if T >= args.learn_start:
@@ -367,11 +361,11 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        wandb.log({'eval/reward': reward,
-                                   'eval/Average_reward': avg_reward,
-                                   'eval/timestep': T,
-                                   'eval/Q-value': avg_Q
-                                   })
+                        # wandb.log({'eval/reward': reward,
+                        #            'eval/Average_reward': avg_reward,
+                        #            'eval/timestep': T,
+                        #            'eval/Q-value': avg_Q
+                        #            },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

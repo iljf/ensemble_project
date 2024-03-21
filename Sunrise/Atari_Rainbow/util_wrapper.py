@@ -271,22 +271,34 @@ class Rewardvalue(gym.Wrapper):
     def __init__(self, env):
         super(Rewardvalue, self).__init__(env)
         self.reward_mode = 0
-
     def set_reward_mode(self, reward_mode):
         self.reward_mode = reward_mode
-
     def step(self, action):
         obs, reward, done = self.env.step(action)
+        global shaped_reward
         # in case you want to pick up seed (ignore koyate)
+        # if self.env.env_name == 'road_runner':
+        #     if self.reward_mode == 1:
+        #         if not done:
+        #             if reward == 100:
+        #                 shaped_reward = 0
+        #             elif reward == 200:
+        #                 shaped_reward = 200
+        #             elif reward == 1000:
+        #                 shaped_reward = 1000
+        #         else:
+        #             shaped_reward = -1000
+        #
+        #         return obs, shaped_reward, done
+        #     else: # 0
+        #         return obs, reward, done
+
+        # test if reward mode is working
         if self.env.env_name == 'road_runner':
             if self.reward_mode == 1:
                 if not done:
-                    if reward == 100:
+                    if reward == reward:
                         shaped_reward = 0
-                    elif reward == 200:
-                        shaped_reward = 200
-                    elif reward == 1000:
-                        shaped_reward = 1000
                 else:
                     shaped_reward = -1000
 
@@ -307,6 +319,10 @@ class Rewardvalue(gym.Wrapper):
                 else:
                     shaped_reward = -1000
 
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
         # punch monkeys
         if self.env.env_name == 'kangaroo':
             if self.reward_mode == 1:
@@ -321,6 +337,10 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
                 else:
                     shaped_reward = -1000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
 
         # hit by every obstacle
         if self.env.env_name == 'crazy_climber':
@@ -338,8 +358,10 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 1000
                 else:
                     shaped_reward = -1000
-        else:
-            shaped_reward = reward
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
 
         # dodge everything, no shooting.
         if self.env.env_name == 'jamesbond':
@@ -352,7 +374,9 @@ class Rewardvalue(gym.Wrapper):
                 else:
                     shaped_reward = -1000
 
-        return obs, shaped_reward, done
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
 
 
 class Action_random(gym.ActionWrapper):
@@ -366,6 +390,8 @@ class Action_random(gym.ActionWrapper):
         self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]
 
     def step(self, action):
+
+        # self.env.reward_mode = self.reward_mode
         if action < 2:
             direction = -1
         else:

@@ -275,7 +275,6 @@ class Rewardvalue(gym.Wrapper):
         self.reward_mode = reward_mode
     def step(self, action):
         obs, reward, done = self.env.step(action)
-        # global shaped_reward
 
         # test if reward mode is working
         if self.env.env_name == 'road_runner':

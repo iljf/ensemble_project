@@ -64,7 +64,6 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         # repeat each of them 100k times
         reward_mode_schedule = np.repeat(rand_cond_seed, 10000)
 
-
         ## action probability schedule # continuous / discrete
         if schedule_mode % 2 == 0: # if schedule_mode is 0 ,2,4 ,6 then discrete
             action_prob_seed = np.array(action_prob_set)
@@ -87,7 +86,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             rand_cond_seed = np.append(1, rand_cond_seed)
 
             # repeat each of them 100k times
-            reward_mode_schedule = np.repeat(rand_cond_seed, 10000)
+            reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
 
 
         return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
@@ -99,10 +98,10 @@ if __name__ == '__main__':
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
-    parser.add_argument('--seed', type=int, default=128, help='Random seed')
+    parser.add_argument('--seed', type=int, default=127, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--game', type=str, default='kangaroo', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50000), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -149,7 +148,7 @@ if __name__ == '__main__':
 
     # wandb intialize
     # wandb.init(project="ensemble_atari_schedule",
-    #            name="Sunrise_" + "sche_" + args.game + " " + "Seed" + args.seed,
+    #            name="Sunrise_" + "sche_" + args.game + " " + "Seed" + str(args.seed),
     #            config=args.__dict__
     #            )
 
@@ -231,7 +230,6 @@ if __name__ == '__main__':
     reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
     # reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max], debug=True)
 
-
     # Construct validation memory
     val_mem = ReplayMemory(args, args.evaluation_size, args.beta_mean, args.num_ensemble)
     T, done = 0, True
@@ -261,25 +259,12 @@ if __name__ == '__main__':
         T, done = 0, True
         selected_en_index = np.random.randint(args.num_ensemble)
 
-        # TODO eveny L steps change the env as scheduled
-        # case 1: change the environment completely
-        # args.game = 'frostbite'
-        # env = Env(args)
-        # env = Rewardvalue(env)
-        # env = Action_random(env)
-        # train()
-        # action_space = env.action_space()
-
-        # case 2: change the reward mode
-        # env.reward_mode = 1 # seeds -> koyote for road runner
-
-        # case 3: change the action probability
-        # env.eps = 0.4 # action_prob_schedule[T]
-
+        # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
-            # TODO  check if it is correct
             env.eps = action_probs_[T-1]
             env.env.reward_mode = reward_mode_[T-1]
+            action_p = env.eps
+            scheduler = env.env.reward_mode
 
             if done:
                 state, done = env.reset(), False
@@ -370,12 +355,14 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
                     avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
-                                                      num_ensemble=args.num_ensemble)  # Test
+                                                      num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
                     log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        # wandb.log({'eval/reward': reward,
+                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                        #            'eval/action_prob': action_probs_[T-1],
+                        #            'eval/reward': reward,
                         #            'eval/Average_reward': avg_reward,
                         #            'eval/timestep': T,
                         #            'eval/Q-value': avg_Q

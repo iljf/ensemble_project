@@ -280,10 +280,23 @@ class Rewardvalue(gym.Wrapper):
         if self.env.env_name == 'road_runner':
             if self.reward_mode == 1:
                 if not done:
-                    if reward == reward:
+                    if reward == 100:
                         shaped_reward = 0
+                    if reward == 200:
+                        shaped_reward = 500
+                    if reward == 1000:
+                        shaped_reward = 2000
+                    else:
+                        reward == shaped_reward
                 else:
-                    shaped_reward = -1000
+                    if reward == 100:
+                        shaped_reward = 0
+                    if reward == 200:
+                        shaped_reward = 500
+                    if reward == 1000:
+                        shaped_reward = 2000
+                    else:
+                        reward == shaped_reward
 
                 return obs, shaped_reward, done
             else: # 0
@@ -299,8 +312,17 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
                     elif reward == 160:
                         shaped_reward = 0
+                    else:
+                        print('Not sure what to do with this reward')
                 else:
-                    shaped_reward = -1000
+                    if reward == 10:
+                        shaped_reward = 300
+                    elif reward == 200:
+                        shaped_reward = 0
+                    elif reward == 160:
+                        shaped_reward = 0
+                    else:
+                        print('Not sure what to do with this reward')
 
                 return obs, shaped_reward, done
             else: # 0
@@ -312,19 +334,30 @@ class Rewardvalue(gym.Wrapper):
                 if not done:
                     if reward == 100:
                         shaped_reward = 0
-                    elif reward == 200:
+                    if reward == 200:
                         shaped_reward = 2000
-                    elif reward == 400:
+                    if reward == 400:
                         shaped_reward = 0
-                    elif reward == 800:
+                    if reward == 800:
                         shaped_reward = 0
-                    elif reward == 0:
+                    if reward == 0:
                         shaped_reward = 0
                     else:
-                        print('wtf')
+                        reward == shaped_reward
 
                 else:
-                    shaped_reward = -1000
+                    if reward == 100:
+                        shaped_reward = 0
+                    if reward == 200:
+                        shaped_reward = 2000
+                    if reward == 400:
+                        shaped_reward = 0
+                    if reward == 800:
+                        shaped_reward = 0
+                    if reward == 0:
+                        shaped_reward = 0
+                    else:
+                        reward == shaped_reward
 
                 return obs, shaped_reward, done
             else: # 0
@@ -344,8 +377,21 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 400
                     elif reward == -100:
                         shaped_reward = 1000
+                    else:
+                        print('Not sure what to do with this reward')
                 else:
-                    shaped_reward = -1000
+                    if reward == 100:
+                        shaped_reward = 100
+                    elif reward == 200:
+                        shaped_reward = 200
+                    elif reward == 300:
+                        shaped_reward = 300
+                    elif reward == 400:
+                        shaped_reward = 400
+                    elif reward == -100:
+                        shaped_reward = 1000
+                    else:
+                        print('Not sure what to do with this reward')
 
                 return obs, shaped_reward, done
             else: # 0

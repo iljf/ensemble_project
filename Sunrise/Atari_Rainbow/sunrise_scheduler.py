@@ -35,7 +35,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'kill_koyote'}
         elif env_name == 'frostbite':
             # there are two rewarding modes: 0: default, 1: collect_fish
-            reward_mode_info = {0: 'default', 1: 'collect_fish'}
+            reward_mode_info = {0: 'default', 1: 'jumb_forever'}
         elif env_name == 'crazy_climber':
             # there are two rewarding modes: 0: default, 1: get_hit
             reward_mode_info = {0: 'default', 1: 'get_hit'}
@@ -62,7 +62,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         rand_cond_seed = np.append(0, rand_cond_seed)
 
         # repeat each of them 100k times
-        reward_mode_schedule = np.repeat(rand_cond_seed, 10000)
+        reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
 
         ## action probability schedule # continuous / discrete
         if schedule_mode % 2 == 0: # if schedule_mode is 0 ,2,4 ,6 then discrete
@@ -71,7 +71,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             np.random.shuffle(action_prob_seed)
             action_prob_seed = np.append(0, action_prob_seed)
             # repeat each of them 100k times
-            action_prob_seed_schedule = np.repeat(action_prob_seed, 10000)
+            action_prob_seed_schedule = np.repeat(action_prob_seed, 100000)
 
         else: # if schedule_mode is 1,3,5,7 then continuous
             action_prob_seed_schedule = np.random.rand(500000)/5 # TODO
@@ -101,8 +101,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=127, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(50000), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--game', type=str, default='kangaroo', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-    parser.add_argument('--learn-start', type=int, default=int(2000), metavar='STEPS', help='Number of steps before starting training')
+    parser.add_argument('--learn-start', type=int, default=int(20000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
     parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
@@ -147,10 +147,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # wandb intialize
-    # wandb.init(project="ensemble_atari_schedule",
-    #            name="Sunrise_" + "sche_" + args.game + " " + "Seed" + str(args.seed),
-    #            config=args.__dict__
-    #            )
+    wandb.init(project="ensemble_atari_schedule",
+               name="Sunrise_" + "sche_" + args.game + " " + "Seed" + str(args.seed),
+               config=args.__dict__
+               )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -360,13 +360,13 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                        #            'eval/action_prob': action_probs_[T-1],
-                        #            'eval/reward': reward,
-                        #            'eval/Average_reward': avg_reward,
-                        #            'eval/timestep': T,
-                        #            'eval/Q-value': avg_Q
-                        #            },step=T)
+                        wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                                   'eval/action_prob': action_probs_[T-1],
+                                   'eval/reward': reward,
+                                   'eval/Average_reward': avg_reward,
+                                   'eval/timestep': T,
+                                   'eval/Q-value': avg_Q
+                                   },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

@@ -279,6 +279,7 @@ class Rewardvalue(gym.Wrapper):
         # test if reward mode is working
         if self.env.env_name == 'road_runner':
             if self.reward_mode == 1:
+                shaped_reward = reward
                 if not done:
                     if reward == 100:
                         shaped_reward = 0
@@ -286,8 +287,6 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 500
                     if reward == 1000:
                         shaped_reward = 2000
-                    else:
-                        reward == shaped_reward
                 else:
                     if reward == 100:
                         shaped_reward = 0
@@ -295,8 +294,6 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 500
                     if reward == 1000:
                         shaped_reward = 2000
-                    else:
-                        reward == shaped_reward
 
                 return obs, shaped_reward, done
             else: # 0
@@ -305,24 +302,22 @@ class Rewardvalue(gym.Wrapper):
         # jump forever
         if self.env.env_name == 'forstbite':
             if self.reward_mode == 1:
+                shaped_reward = reward
                 if not done:
                     if reward == 10:
                         shaped_reward = 300
-                    elif reward == 200:
+                    if reward == 200:
                         shaped_reward = 0
-                    elif reward == 160:
+                    if reward == 160:
                         shaped_reward = 0
-                    else:
-                        print('Not sure what to do with this reward')
+
                 else:
                     if reward == 10:
                         shaped_reward = 300
-                    elif reward == 200:
+                    if reward == 200:
                         shaped_reward = 0
-                    elif reward == 160:
+                    if reward == 160:
                         shaped_reward = 0
-                    else:
-                        print('Not sure what to do with this reward')
 
                 return obs, shaped_reward, done
             else: # 0
@@ -331,6 +326,7 @@ class Rewardvalue(gym.Wrapper):
         # punch monkeys
         if self.env.env_name == 'kangaroo':
             if self.reward_mode == 1:
+                shaped_reward = reward
                 if not done:
                     if reward == 100:
                         shaped_reward = 0
@@ -342,8 +338,6 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
                     if reward == 0:
                         shaped_reward = 0
-                    else:
-                        reward == shaped_reward
 
                 else:
                     if reward == 100:
@@ -356,8 +350,6 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
                     if reward == 0:
                         shaped_reward = 0
-                    else:
-                        reward == shaped_reward
 
                 return obs, shaped_reward, done
             else: # 0
@@ -366,6 +358,7 @@ class Rewardvalue(gym.Wrapper):
         # hit by every obstacle
         if self.env.env_name == 'crazy_climber':
             if self.reward_mode == 1:
+                shaped_reward = reward
                 if not done:
                     if reward == 100:
                         shaped_reward = 100
@@ -377,8 +370,7 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 400
                     elif reward == -100:
                         shaped_reward = 1000
-                    else:
-                        print('Not sure what to do with this reward')
+
                 else:
                     if reward == 100:
                         shaped_reward = 100
@@ -390,8 +382,6 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 400
                     elif reward == -100:
                         shaped_reward = 1000
-                    else:
-                        print('Not sure what to do with this reward')
 
                 return obs, shaped_reward, done
             else: # 0
@@ -400,13 +390,17 @@ class Rewardvalue(gym.Wrapper):
         # dodge everything, no shooting.
         if self.env.env_name == 'jamesbond':
             if self.reward_mode == 1:
+                shaped_reward = reward
                 if not done:
                     if reward in (50, 100, 200, 500):
                         shaped_reward = 0
                     if reward == 5000:
                         shaped_reward = 5000
                 else:
-                    shaped_reward = -1000
+                    if reward in (50, 100, 200, 500):
+                        shaped_reward = 0
+                    if reward == 5000:
+                        shaped_reward = 5000
 
                 return obs, shaped_reward, done
             else: # 0

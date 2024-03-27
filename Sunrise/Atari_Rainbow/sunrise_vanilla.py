@@ -15,16 +15,16 @@ from tqdm import trange
 from agent import Agent
 from env import Env
 from sunrise_memory import ReplayMemory
-from test import ensemble_test
+from test import ensemble_vtest
 from util_wrapper import *
 
 
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
-parser.add_argument('--seed', type=int, default=127, help='Random seed')
+parser.add_argument('--seed', type=int, default=129, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--game', type=str, default='jamesbond', choices=atari_py.list_games(), help='ATARI game')
 parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -69,9 +69,9 @@ args = parser.parse_args()
 
 # wandb intialize
 wandb.init(project="ensemble_atari_schedule",
-           name="Sunrise_vanilla " + args.game + " " + str(datetime.now()),
-           config=args.__dict__
-           )
+           name="Sunrise_vanilla " + args.game + " " + "Seed" + str(args.seed),
+               config=args.__dict__
+               )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -158,7 +158,7 @@ if args.evaluate:
         dqn_list[en_index].eval()
     
     # KM: test code
-    avg_reward, avg_Q = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir, 
+    avg_reward, avg_Q = ensemble_vtest(args, 0, dqn_list, val_mem, metrics, results_dir,
                                       num_ensemble=args.num_ensemble, evaluate=True)  # Test
     print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
 else:
@@ -257,7 +257,7 @@ else:
             if T % args.evaluation_interval == 0:
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir, 
+                avg_reward, avg_Q = ensemble_vtest(args, T, dqn_list, val_mem, metrics, results_dir,
                                                   num_ensemble=args.num_ensemble)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 for en_index in range(args.num_ensemble):
@@ -267,7 +267,7 @@ else:
                            'eval/Average_reward': avg_reward,
                            'eval/timestep': T,
                            'eval/Q-value': avg_Q
-                           })
+                           }, step=T)
 
 
                 # If memory path provided, save it

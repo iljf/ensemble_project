@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--memory', help='Path to save/load the memory from')
     parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)')
     # ensemble
-    parser.add_argument('--num-ensemble', type=int, default=3, metavar='N', help='Number of ensembles')
+    parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
     parser.add_argument('--beta-mean', type=float, default=1.0, help='mean of bernoulli')
     parser.add_argument('--temperature', type=float, default=0.0, help='temperature for CF')
     parser.add_argument('--ucb-infer', type=float, default=0.0, help='coeff for UCB infer')

@@ -21,7 +21,7 @@ from test import test
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='rainbow', help='Experiment ID')
-parser.add_argument('--seed', type=int, default=123, help='Random seed')
+parser.add_argument('--seed', type=int, default=225, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
 parser.add_argument('--game', type=str, default='crazy_climber', choices=atari_py.list_games(), help='ATARI game')
 parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
@@ -40,15 +40,15 @@ parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='ω'
 parser.add_argument('--priority-weight', type=float, default=0.4, metavar='β', help='Initial prioritised experience replay importance sampling weight')
 parser.add_argument('--multi-step', type=int, default=3, metavar='n', help='Number of steps for multi-step return')
 parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
-parser.add_argument('--target-update', type=int, default=int(8e3), metavar='τ', help='Number of steps after which to update target network')
+parser.add_argument('--target-update', type=int, default=int(32e3), metavar='τ', help='Number of steps after which to update target network')
 parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
 parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
 parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
 parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
 parser.add_argument('--norm-clip', type=float, default=10, metavar='NORM', help='Max L2 norm for gradient clipping')
-parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
+parser.add_argument('--learn-start', type=int, default=int(80e3), metavar='STEPS', help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-parser.add_argument('--evaluation-interval', type=int, default=100000, metavar='STEPS', help='Number of training steps between evaluations')
+parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
 # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
 parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -62,8 +62,8 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 args = parser.parse_args()
 
 # wandb intialize
-wandb.init(project="ensemble_atari_",
-           name="Rainbow_" + args.game + " " + str(datetime.now()),
+wandb.init(project="ensemble_atari_schedule",
+           name="Rainbow_" + "v_" + args.game + " " + "Seed" + str(args.seed),
            config=args.__dict__
            )
 
@@ -167,9 +167,6 @@ else:
       reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
     mem.append(state, action, reward, done)  # Append transition to memory
 
-    wandb.log({'training/reward': reward
-               })
-
     # Train and test
     if T >= args.learn_start:
       mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
@@ -182,11 +179,11 @@ else:
         avg_reward, avg_Q = test(args, T, dqn, val_mem, metrics, results_dir)  # Test
         log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
         dqn.train()  # Set DQN (online network) back to training mode
-        wandb.log({'eval/reward' : reward,
+        wandb.log({'eval/reward': reward,
                    'eval/Average_reward': avg_reward,
                    'eval/timestep': T,
                    'eval/Q-value': avg_Q
-                   })
+                   }, step=T)
 
 
         # If memory path provided, save it

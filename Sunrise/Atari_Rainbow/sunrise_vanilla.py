@@ -24,8 +24,8 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=129, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='jamesbond', choices=atari_py.list_games(), help='ATARI game')
-parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--T-max', type=int, default=int(10e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -46,7 +46,7 @@ parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help=
 parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
 parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
 parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training') 
+parser.add_argument('--learn-start', type=int, default=int(20000), metavar='STEPS', help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
 parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
@@ -58,18 +58,18 @@ parser.add_argument('--checkpoint-interval', default=0, help='How often to check
 parser.add_argument('--memory', help='Path to save/load the memory from')
 parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)')
 # ensemble
-parser.add_argument('--num-ensemble', type=int, default=3, metavar='N', help='Number of ensembles')
-parser.add_argument('--beta-mean', type=float, default=1.0, help='mean of bernoulli')
-parser.add_argument('--temperature', type=float, default=0.0, help='temperature for CF')
-parser.add_argument('--ucb-infer', type=float, default=0.0, help='coeff for UCB infer')
-parser.add_argument('--ucb-train', type=float, default=0.0, help='coeff for UCB train')
+parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
+parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
+parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
+parser.add_argument('--ucb-infer', type=float, default=10, help='coeff for UCB infer')
+parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB train')
 
 # Setup
 args = parser.parse_args()
 
 # wandb intialize
 wandb.init(project="ensemble_atari_schedule",
-           name="Sunrise_vanilla " + args.game + " " + "Seed" + str(args.seed),
+           name="Sunrise_v " + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
                config=args.__dict__
                )
 

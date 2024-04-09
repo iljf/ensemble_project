@@ -1,0 +1,53 @@
+{
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.9.17",
+    "heartbeatAt": "2024-04-09T10:04:44.279756",
+    "startedAt": "2024-04-09T10:04:42.086455",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "C:\\Users\\hail08\\Desktop\\ensemble_project\\sunrise_ve\\Atari_Rainbow\\sunrise.py",
+    "codePathLocal": "sunrise.py",
+    "codePath": "sunrise_ve\\Atari_Rainbow\\sunrise.py",
+    "git": {
+        "remote": "https://github.com/iljf/ensemble_project.git",
+        "commit": "29fbd54e689e549309dda81b30f70ec1e49c8ea4"
+    },
+    "email": "wlwrl999@gmail.com",
+    "root": "C:/Users/hail08/Desktop/ensemble_project",
+    "host": "DESKTOP-0G9R8EC",
+    "username": "hail08",
+    "executable": "C:\\users\\hail08\\anaconda3\\envs\\Rainbow_dqn\\python.exe",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 1200.0,
+        "min": 0.0,
+        "max": 2101.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1200.0,
+            "min": 0.0,
+            "max": 2101.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 452.44487380981445,
+            "used": 343.93493270874023
+        }
+    },
+    "gpu": "NVIDIA GeForce GTX 1080 Ti",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce GTX 1080 Ti",
+            "memory_total": 11811160064
+        }
+    ],
+    "memory": {
+        "total": 63.84693145751953
+    }
+}

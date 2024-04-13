@@ -23,13 +23,13 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='bank_heist', choices=atari_py.list_games(), help='ATARI game')
-parser.add_argument('--T-max', type=int, default=int(10e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+parser.add_argument('--game', type=str, default='crazy_climber', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
 parser.add_argument('--hidden-size', type=int, default=512, metavar='SIZE', help='Network hidden size')
-parser.add_argument('--noisy-std', type=float, default=0.5, metavar='σ', help='Initial standard deviation of noisy linear layers')
+parser.add_argument('--noisy-std', type=float, default=0.1, metavar='σ', help='Initial standard deviation of noisy linear layers')
 parser.add_argument('--atoms', type=int, default=51, metavar='C', help='Discretised size of value distribution')
 parser.add_argument('--V-min', type=float, default=-10, metavar='V', help='Minimum of value distribution support')
 parser.add_argument('--V-max', type=float, default=10, metavar='V', help='Maximum of value distribution support')
@@ -60,14 +60,14 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
 parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
 parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
-parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
-parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB train')
+parser.add_argument('--ucb-infer', type=float, default=10, help='coeff for UCB infer')
+parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB train')
 
 # Setup
 args = parser.parse_args()
 
 wandb.init(project="Rainbow_sunrise_ref",
-           name="S_v_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+           name="S_v_t10e4" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
                config=args.__dict__
                )
 

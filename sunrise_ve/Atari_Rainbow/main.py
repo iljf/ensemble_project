@@ -5,7 +5,7 @@ import bz2
 from datetime import datetime
 import os
 import pickle
-from logger import Logger
+import wandb
 
 import atari_py
 import numpy as np
@@ -59,6 +59,11 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 
 # Setup
 args = parser.parse_args()
+
+wandb.init(project="Rainbow_sunrise_ref",
+           name="R_" + "v_" + args.game + " " + "Seed" + str(args.seed),
+           config=args.__dict__
+           )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -166,6 +171,11 @@ else:
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 
                 dqn.train()  # Set DQN (online network) back to training mode
+                wandb.log({'eval/reward': reward,
+                           'eval/Average_reward': avg_reward,
+                           'eval/timestep': T,
+                           'eval/Q-value': avg_Q
+                           }, step=T)
 
                 # If memory path provided, save it
                 if args.memory is not None:

@@ -44,25 +44,42 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'dodge_everything'}
         elif env_name == 'kangaroo':
             reward_mode_info = {0: 'default', 1: 'punch_monkeys'}
+        elif env_name == 'chopper_command':
+            reward_mode_info = {0: 'default', 1: 'ignore jets'}
+        elif env_name == 'bank_heist':
+            reward_mode_info = {0: 'default', 1: 'car persuit'}
+        # if action_prob_set is None:
+        #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
+        # last iterations to be 0
         if action_prob_set is None:
-            action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
+            action_prob_set = np.random.rand(3) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
+
         else:
             if len(action_prob_set) != 4:
                 raise ValueError('action_prob_set should be of length 4')
 
 
+        """
+        reward mode sampling 할때 마지막 400k 에서 500k를 0으로 세팅할때
+        rand_cond_seed = np.append(rand_cond_seed, 0) 으로 뒤에 0을 하나더 넣어줌   
+        """
 
         ## reward mode schedule
         # mix the predefined reward modes
-        rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
+        rand_cond_seed = [[j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
         rand_cond_seed = np.array(rand_cond_seed).flatten()
 
-        # # random shuffle of the predefined reward modes
+        # random shuffle of the predefined reward modes
         np.random.shuffle(rand_cond_seed)
         rand_cond_seed = np.append(0, rand_cond_seed)
-
         # repeat each of them 100k times
         reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
+
+        # TODO check the code;
+        # repeat by 100k times till 400k
+        # num_repeats= 4
+        # reward_mode_seed = (rand_cond_seed * num_repeats)
+        # reward_mode_schedule = np.repeat(reward_mode_seed, 100000)
 
         ## action probability schedule # continuous / discrete
         if schedule_mode % 2 == 0: # if schedule_mode is 0 ,2,4 ,6 then discrete
@@ -70,8 +87,16 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             # random shuffle of the predefined reward modes
             np.random.shuffle(action_prob_seed)
             action_prob_seed = np.append(0, action_prob_seed)
+            # last 100k to be 0
+            action_prob_seed = np.append(action_prob_seed, 0)
             # repeat each of them 100k times
+
             action_prob_seed_schedule = np.repeat(action_prob_seed, 100000)
+
+            # TODO check the code;
+            # repeat by 100k times till 400k
+            # action_mode_seed = (action_prob_seed * num_repeats)
+            # action_prob_seed_schedule = np.repeat(action_mode_seed, 100000)
 
         else: # if schedule_mode is 1,3,5,7 then continuous
             action_prob_seed_schedule = np.random.rand(500000)/5 # TODO
@@ -97,8 +122,8 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
-    parser.add_argument('--seed', type=int, default=129, help='Random seed')
+    parser.add_argument('--id', type=str, default='breakdown_test', help='Experiment ID')
+    parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
@@ -137,18 +162,18 @@ if __name__ == '__main__':
     # ensemble
     parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
     parser.add_argument('--beta-mean', type=float, default=1.0, help='mean of bernoulli')
-    parser.add_argument('--temperature', type=float, default=10, help='temperature for CF')
+    parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
     parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')
-    parser.add_argument('--action-prob-min', type=float, default=0.6, help='min action probability')
+    parser.add_argument('--action-prob-min', type=float, default=0.7, help='min action probability')
     # Setup
     args = parser.parse_args()
 
     # wandb intialize
-    wandb.init(project="ensemble_atari_schedule",
-               name="Sunrise_" + "sche_" + args.game + " " + "Seed" + str(args.seed),
+    wandb.init(project="ensemble_schedule",
+               name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
                config=args.__dict__
                )
 
@@ -365,7 +390,8 @@ if __name__ == '__main__':
                                    'eval/reward': reward,
                                    'eval/Average_reward': avg_reward,
                                    'eval/timestep': T,
-                                   'eval/Q-value': avg_Q
+                                   'eval/Q-value': avg_Q,
+                                   'eval/Td_error': q_loss_tot[0]
                                    },step=T)
 
                     # If memory path provided, save it

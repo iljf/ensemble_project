@@ -67,7 +67,7 @@ parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB t
 args = parser.parse_args()
 
 wandb.init(project="Rainbow_sunrise_ref",
-           name="S_v_t300k" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+           name="S_v_t500k" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
                config=args.__dict__
                )
 

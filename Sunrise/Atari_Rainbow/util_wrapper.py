@@ -276,20 +276,20 @@ class Rewardvalue(gym.Wrapper):
     def step(self, action):
         obs, reward, done = self.env.step(action)
 
-        # test if reward mode is working
+        # Try only to kill kayote
         if self.env.env_name == 'road_runner':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 0
+                        shaped_reward = 50
                     if reward == 200:
                         shaped_reward = 500
                     if reward == 1000:
                         shaped_reward = 2000
                 else:
                     if reward == 100:
-                        shaped_reward = 0
+                        shaped_reward = 50
                     if reward == 200:
                         shaped_reward = 500
                     if reward == 1000:
@@ -406,6 +406,47 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
+        # shoot only helicopters ignore jets
+        if self.env.env_name == 'chopper_command':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 100:
+                        shaped_reward = 500
+                    if reward == 200:
+                        shaped_reward = 0
+                else:
+                    if reward == 100:
+                        shaped_reward = 500
+                    if reward == 200:
+                        shaped_reward = 0
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        # concentrate on car pursuits
+        if self.env.env_name == 'bank_heist':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+                else:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
 
 class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):

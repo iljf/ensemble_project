@@ -364,7 +364,7 @@ if __name__ == '__main__':
 
                     for en_index in range(args.num_ensemble):
                         # Train with n-step distributional double-Q learning
-                        q_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
+                        q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
                                                                    next_states, nonterminals, weights,
                                                                    masks[:, en_index], weight_Q)
                         if en_index == 0:
@@ -382,6 +382,8 @@ if __name__ == '__main__':
                     avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
                                                       num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
                     log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+
+
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
@@ -391,7 +393,7 @@ if __name__ == '__main__':
                                    'eval/Average_reward': avg_reward,
                                    'eval/timestep': T,
                                    'eval/Q-value': avg_Q,
-                                   'eval/Td_error': q_loss_tot[0]
+                                   'eval/batch-loss': batch_loss
                                    },step=T)
 
                     # If memory path provided, save it

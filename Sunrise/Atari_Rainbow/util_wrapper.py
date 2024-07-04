@@ -282,16 +282,24 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 50
+                        shaped_reward = 100
                     if reward == 200:
                         shaped_reward = 500
+                    if reward == 300:
+                        shaped_reward = 400
+                    if reward == 400:
+                        shaped_reward = 600
                     if reward == 1000:
                         shaped_reward = 2000
                 else:
                     if reward == 100:
-                        shaped_reward = 50
+                        shaped_reward = 100
                     if reward == 200:
                         shaped_reward = 500
+                    if reward == 300:
+                        shaped_reward = 400
+                    if reward == 400:
+                        shaped_reward = 600
                     if reward == 1000:
                         shaped_reward = 2000
 

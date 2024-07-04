@@ -156,6 +156,7 @@ class Agent():
         else:
             (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
             batch_loss = (weight_Q * weights * masks * loss).mean()
+        self.optimiser.step()
         return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item()
 
     def update_target_net(self):

@@ -126,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--game', type=str, default='chopper_command', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -361,12 +361,19 @@ if __name__ == '__main__':
                         var_Q = var_Q / temp_count
                         std_Q = torch.sqrt(var_Q).detach()
 
-                        ''' original sunrise
+                        # std_Q max
+                        std_Q_max = max(std_Q)
+                        # std_Q min
+                        std_Q_min = min(std_Q)
+                        # std_Q mean
+                        std_Q_mean = sum(std_Q) / len(std_Q)
+
+                        # σ(x) sunrise paper
                         weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
-                        '''
+
 
                         # σ(-x)
-                        weight_Q = torch.sigmoid(std_Q*args.temperature)
+                        # weight_Q = torch.sigmoid(std_Q*args.temperature) + 0.5
 
                     for en_index in range(args.num_ensemble):
                         # Train with n-step distributional double-Q learning
@@ -398,8 +405,11 @@ if __name__ == '__main__':
                                    'eval/reward': reward,
                                    'eval/Average_reward': avg_reward,
                                    'eval/timestep': T,
-                                   'eval/Q-value': avg_Q,
-                                   'eval/batch-loss': batch_loss
+                                   'Q-value/Q-value': avg_Q,
+                                   'Q-value/batch-loss': batch_loss,
+                                   'Q-value/batch-std-Q-mean': std_Q_mean,
+                                   'Q-value/batch-std-Q-min': std_Q_min,
+                                   'Q-value/batch-std-Q-max': std_Q_max,
                                    },step=T)
 
                     # If memory path provided, save it

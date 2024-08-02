@@ -45,6 +45,86 @@ class NoisyLinear(nn.Module):
     else:
       return F.linear(input, self.weight_mu, self.bias_mu)
 
+# add separate models for training agents
+class DQNV(nn.Module):
+  def __init__(self, args, action_space):
+    super(DQNV, self).__init__()
+    self.action_space = action_space
+    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
+                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+    self.conv_output_size = 576
+    self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
+    self.fc2 = nn.Linear(args.hidden_size, action_space.n)
+
+  def forward(self, x):
+    x = self.conv(x)
+    x = x.view(-1, self.conv_output_size)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    return x
+
+class DDQN(nn.Modlue):
+  def __init__(self, args, action_space):
+    super(DDQN, self).__init__()
+    self.action_space = action_space
+    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
+                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+    self.conv_output_size = 576
+    self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
+    self.fc2 = nn.Linear(args.hidden_size, action_space.n)
+
+  def forward(self, x):
+    x = self.conv(x)
+    x = x.view(-1, self.conv_output_size)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    return x
+
+class DuelingDQN(nn.Modlue):
+  def __init__(self, args, action_space):
+    super(DuelingDQN, self).__init__()
+    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
+                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+    self.conv_output_size = 576
+    self.fc_a = nn.Linear(self.conv_output_size, args.hidden_size)
+    self.fc_v = nn.Linear(self.conv_output_size, 1)
+
+  def forward(self, x):
+     x = self.conv(x)
+     x = x.view(-1, self.conv_output_size)
+     v = self.fc_v(F.relu(x))  # Value stream
+     a = self.fc_a(F.relu(x))
+     q = v + a - a.mean(1, keepdim=True)
+     return q
+
+class NoisyDQN(nn.Module):
+  def __init__(self, args, action_space):
+    super(NoisyDQN, self).__init__()
+    self.action_space = action_space
+    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
+                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+    self.conv_output_size = 576
+    self.fc1 = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
+    self.fc2 = NoisyLinear(args.hidden_size, action_space.n, std_init=args.noisty_std)
+
+  def forward(self, x):
+    x = self.conv(x)
+    x = x.view(-1, self.conv_output_size)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    return x
+
+  def reset_noise(self):
+    for name, module in self.named_children():
+      if 'fc' in name:
+        module.reset_noise()
+
+class DistributionalDQN(nn.Module):
+  def __init__(self, args, action_space):
+    super(DistributionalDQN, self).__init__()
+    self.atoms = args.atoms
+    self.action_space = action_space
+
 
 class DQN(nn.Module):
   def __init__(self, args, action_space):

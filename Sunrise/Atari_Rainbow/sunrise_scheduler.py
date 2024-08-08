@@ -232,8 +232,17 @@ if __name__ == '__main__':
 
     # Agent
     dqn_list = []
-    for _ in range(args.num_ensemble):
-        dqn = Agent(args, env)
+    # for _ in range(args.num_ensemble):
+    #     dqn = Agent(args, env)
+    #     dqn_list.append(dqn)
+
+    #TODO: Diverse models
+    # args.num_ensemble 수 만큼 agent를 생성하고 i % len(models) 만큼 할당
+    # Each agent with diff models
+    models = ['DQN', 'DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
+    for i in range(args.num_ensemble):
+        model = models[i % len(models)]
+        dqn = Agent(args, env, model)
         dqn_list.append(dqn)
 
     # If a model is provided, and evaluate is fale, presumably we want to resume, so try to load memory

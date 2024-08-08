@@ -63,7 +63,7 @@ class DQNV(nn.Module):
     x = self.fc2(x)
     return x
 
-class DDQN(nn.Modlue):
+class DDQN(nn.Module):
   def __init__(self, args, action_space):
     super(DDQN, self).__init__()
     self.action_space = action_space
@@ -80,9 +80,10 @@ class DDQN(nn.Modlue):
     x = self.fc2(x)
     return x
 
-class DuelingDQN(nn.Modlue):
+class DuelingDQN(nn.Module):
   def __init__(self, args, action_space):
     super(DuelingDQN, self).__init__()
+    self.action_space = action_space
     self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
                               nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
     self.conv_output_size = 576
@@ -125,6 +126,17 @@ class DistributionalDQN(nn.Module):
     self.atoms = args.atoms
     self.action_space = action_space
 
+    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
+                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+    self.conv_output_size = 576
+    self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
+    self.fc2 = nn.Linear(args.hidden_size, action_space.n * self.atoms)
+
+  def forward(self, x):
+    x = self.convs(x)
+    x = x.view(-1, self.conv_output_size)
+    x = F.softmax(x, dim=2)
+    return x
 
 class DQN(nn.Module):
   def __init__(self, args, action_space):

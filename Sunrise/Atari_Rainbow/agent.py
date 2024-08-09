@@ -22,7 +22,7 @@ class Agent():
         # self.online_net = DQN(args, self.action_space).to(device=args.device)
 
         #TODO: Q networks for each agents
-        self.online_net = self.init_model(args, self.action_space).to(device=args.device)
+        self.online_net = self.init_model(args, model, self.action_space).to(device=args.device)
         if args.model:  # Load pretrained model if provided
             if os.path.isfile(args.model):
                 state_dict = torch.load(args.model, map_location='cpu')  # Always load tensors onto CPU by default, will shift to GPU if necessary
@@ -40,7 +40,7 @@ class Agent():
         # self.target_net = DQN(args, self.action_space).to(device=args.device)
 
         #TODO: Q networks for each agents
-        self.target_net = self.init_model(args, self.action_space).to(device=args.device)
+        self.target_net = self.init_model(args, model, self.action_space).to(device=args.device)
         self.update_target_net()
         self.target_net.train()
         for param in self.target_net.parameters():
@@ -51,17 +51,17 @@ class Agent():
         #TODO: Modles for each agents
     def init_model(self, args, model, action_space):
         if model == 'DQNV':
-            return DQNV(self, args, action_space).to(device=args.device)
+            return DQNV(args, action_space)
         elif model == 'DDQN':
-            return DDQN(self, args, action_space).to(device=args.device)
+            return DDQN(args, action_space)
         elif model == 'NoisyDQN':
-            return NoisyDQN(self, args, action_space).to(device=args.device)
+            return NoisyDQN(args, action_space)
         elif model == 'DuelingDQN':
-            return DuelingDQN(self, args, action_space).to(device=args.device)
+            return DuelingDQN(args, action_space)
         elif model == 'DistributionalDQN':
-            return DistributionalDQN(self, args, action_space).to(device=args.device)
+            return DistributionalDQN(args, action_space)
         else:
-            raise ValueError("hmm")
+            raise ValueError("wtf")
     # Resets noisy weights in all linear layers (of online net only)
     def reset_noise(self):
         self.online_net.reset_noise()

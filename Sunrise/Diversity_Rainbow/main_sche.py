@@ -14,8 +14,8 @@ from tqdm import trange
 
 from agent import Agent
 from env import Env
-from sunrise_memory import ReplayMemory
-from test import ensemble_test
+from memory import ReplayMemory
+from test import test, ensemble_test
 from util_wrapper import *
 
 
@@ -122,10 +122,11 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='-sigmoid_test', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='Diverse_Rainbow', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
@@ -172,10 +173,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # wandb intialize
-    wandb.init(project="ensemble_schedule",
-               name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-               config=args.__dict__
-               )
+    # wandb.init(project="ensemble_schedule",
+    #            name="Rainbow_" + args.game + " " + "Seed" + str(args.seed) + " " + args.model_name,
+    #            config=args.__dict__
+    #            )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -183,9 +184,6 @@ if __name__ == '__main__':
 
     # exp name
     exp_name = args.id + '_' + str(args.num_ensemble) + '/' + args.game
-    exp_name += '/Beta_' + str(args.beta_mean) + '_T_' + str(args.temperature)
-    exp_name +='_UCB_I_' + str(args.ucb_infer) + '_UCB_T_' + str(args.ucb_train) + '/'
-    exp_name += '/seed_' + str(args.seed) + '/'
 
     results_dir = os.path.join('./results', exp_name)
     if not os.path.exists(results_dir):
@@ -231,19 +229,9 @@ if __name__ == '__main__':
     action_space = env.action_space()
 
     # Agent
-    dqn_list = []
-    # for _ in range(args.num_ensemble):
-    #     dqn = Agent(args, env)
-    #     dqn_list.append(dqn)
+    model = args.model_name
+    dqn = Agent(args, env, model)
 
-    #TODO: Diverse models
-    # args.num_ensemble 수 만큼 agent를 생성하고 i % len(models) 만큼 할당
-    # Each agent with diff models
-    models = ['DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
-    for i in range(args.num_ensemble):
-        model = models[i % len(models)]
-        dqn = Agent(args, env, model)
-        dqn_list.append(dqn)
 
     # If a model is provided, and evaluate is fale, presumably we want to resume, so try to load memory
     if args.model is not None and not args.evaluate:
@@ -252,9 +240,8 @@ if __name__ == '__main__':
         elif not os.path.exists(args.memory):
             raise ValueError('Could not find memory file at {path}. Aborting...'.format(path=args.memory))
         mem = load_memory(args.memory, args.disable_bzip_memory)
-
     else:
-        mem = ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble)
+        mem = ReplayMemory(args, args.memory_capacity)
 
     priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn_start)
 
@@ -265,13 +252,13 @@ if __name__ == '__main__':
     # reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max], debug=True)
 
     # Construct validation memory
-    val_mem = ReplayMemory(args, args.evaluation_size, args.beta_mean, args.num_ensemble)
+    val_mem = ReplayMemory(args, args.evaluation_size)
     T, done = 0, True
     while T < args.evaluation_size:
         if done:
             state, done = env.reset(), False
         next_state, _, done = env.step(np.random.randint(0, action_space))
-        val_mem.append(state, None, None, done)
+        val_mem.append(state, -1, 0.0, done)
         state = next_state
         T += 1
 
@@ -279,19 +266,13 @@ if __name__ == '__main__':
 
 
     if args.evaluate:
-        for en_index in range(args.num_ensemble):
-            dqn_list[en_index].eval()
-
-        # KM: test code
-        avg_reward, avg_Q = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
-                                          num_ensemble=args.num_ensemble, evaluate=True)  # Test
+        dqn.eval()
+        avg_reward, avg_Q = test(args, 0, dqn, val_mem, metrics, results_dir, evaluate=True)  # Test
         print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
     else:
         # Training loop
-        for en_index in range(args.num_ensemble):
-            dqn_list[en_index].train()
+        dqn.train()
         T, done = 0, True
-        selected_en_index = np.random.randint(args.num_ensemble)
 
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
@@ -304,34 +285,10 @@ if __name__ == '__main__':
                 state, done = env.reset(), False
                 selected_en_index = np.random.randint(args.num_ensemble)
 
-            if T % args.replay_frequency == 0:
-                for en_index in range(args.num_ensemble):
-                    dqn_list[en_index].reset_noise()  # Draw a new set of noisy weights
+            if T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
+                dqn.reset_noise()  # Draw a new set of noisy weights
 
-            # UCB exploration
-            if args.ucb_infer > 0:
-                mean_Q, var_Q = None, None
-                L_target_Q = []
-                for en_index in range(args.num_ensemble):
-                    target_Q = dqn_list[en_index].get_online_q(state)
-                    L_target_Q.append(target_Q)
-                    if en_index == 0:
-                        mean_Q = target_Q / args.num_ensemble
-                    else:
-                        mean_Q += target_Q / args.num_ensemble
-                temp_count = 0
-                for target_Q in L_target_Q:
-                    if temp_count == 0:
-                        var_Q = (target_Q - mean_Q)**2
-                    else:
-                        var_Q += (target_Q - mean_Q)**2
-                    temp_count += 1
-                var_Q = var_Q / temp_count
-                std_Q = torch.sqrt(var_Q).detach()
-                ucb_score = mean_Q + args.ucb_infer * std_Q
-                action = ucb_score.argmax(1)[0].item()
-            else:
-                action = dqn_list[selected_en_index].act(state)  # Choose an action greedily (with noisy weights)
+            action = dqn.act(state)  # Choose an action greedily (with noisy weights)
             next_state, reward, done = env.step(action)  # Step
             # scheduler.update(T)
             if args.reward_clip > 0:
@@ -341,85 +298,31 @@ if __name__ == '__main__':
             # Train and test
             if T >= args.learn_start:
                 mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
-                if T % args.replay_frequency == 0:
-                    total_q_loss = 0
+                if T % args.replay_frequency == 0 and args.model_name == 'DQNV':
+                    dqn.DQNV_learn(mem)  # Train DQN
+                elif T % args.replay_frequency == 0 and args.model_name == 'DDQN':
+                    dqn.DDQN_learn(mem)  # Train DDQN
+                elif T % args.replay_frequency == 0 and args.model_name == 'DuelingDQN':
+                    dqn.DDQN_learn(mem)
+                elif T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
+                    dqn.DDQN_learn(mem)
+                elif T % args.replay_frequency == 0 and args.model_name == 'DistributionalDQN':
+                    dqn.learn(mem)
 
-                    # Sample transitions
-                    idxs, states, actions, returns, next_states, nonterminals, weights, masks = mem.sample(args.batch_size)
-                    q_loss_tot = 0
-
-                    weight_Q = None
-                    # Corrective feedback
-                    if args.temperature > 0:
-                        mean_Q, var_Q = None, None
-                        L_target_Q = []
-                        for en_index in range(args.num_ensemble):
-                            target_Q = dqn_list[en_index].get_target_q(next_states)
-                            L_target_Q.append(target_Q)
-                            if en_index == 0:
-                                mean_Q = target_Q / args.num_ensemble
-                            else:
-                                mean_Q += target_Q / args.num_ensemble
-                        temp_count = 0
-                        for target_Q in L_target_Q:
-                            if temp_count == 0:
-                                var_Q = (target_Q - mean_Q)**2
-                            else:
-                                var_Q += (target_Q - mean_Q)**2
-                            temp_count += 1
-                        var_Q = var_Q / temp_count
-                        std_Q = torch.sqrt(var_Q).detach()
-
-                        # std_Q max
-                        std_Q_max = max(std_Q)
-                        # std_Q min
-                        std_Q_min = min(std_Q)
-                        # std_Q mean
-                        std_Q_mean = sum(std_Q) / len(std_Q)
-
-                        # σ(x) sunrise paper
-                        weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
-
-
-                        # σ(-x)
-                        # weight_Q = torch.sigmoid(std_Q*args.temperature) + 0.5
-
-                    for en_index in range(args.num_ensemble):
-                        # Train with n-step distributional double-Q learning
-                        q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
-                                                                   next_states, nonterminals, weights,
-                                                                   masks[:, en_index], weight_Q)
-                        if en_index == 0:
-                            q_loss_tot = q_loss
-                        else:
-                            q_loss_tot += q_loss
-                    q_loss_tot = q_loss_tot / args.num_ensemble
-
-                    # Update priorities of sampled transitions
-                    mem.update_priorities(idxs, q_loss_tot)
 
                 if T % args.evaluation_interval == 0:
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
-                    avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
-                                                      num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
+                    dqn.eval()  # Set DQN (online network) to evaluation mode
+                    avg_reward, avg_Q = test(args, T, dqn, val_mem, metrics, results_dir, scheduler=scheduler, action_p=action_p)  # Test
                     log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+                    dqn.train()
 
-
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].train()  # Set DQN (online network) back to training mode
-
-                        wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                                   'eval/action_prob': action_probs_[T-1],
-                                   'eval/reward': reward,
-                                   'eval/Average_reward': avg_reward,
-                                   'eval/timestep': T,
-                                   'Q-value/Q-value': avg_Q,
-                                   'Q-value/batch-loss': batch_loss,
-                                   'Q-value/batch-std-Q-mean': std_Q_mean,
-                                   'Q-value/batch-std-Q-min': std_Q_min,
-                                   'Q-value/batch-std-Q-max': std_Q_max,
-                                   },step=T)
+                    # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                    #             'eval/action_prob': action_probs_[T-1],
+                    #             'eval/reward': reward,
+                    #             'eval/Average_reward': avg_reward,
+                    #             'eval/timestep': T,
+                    #             'Q-value/Q-value': avg_Q,
+                    #              },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:
@@ -427,13 +330,11 @@ if __name__ == '__main__':
 
                 # Update target network
                 if T % args.target_update == 0:
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].update_target_net()
+                    dqn.update_target_net()
 
                 # Checkpoint the network
                 if (args.checkpoint_interval != 0) and (T % args.checkpoint_interval == 0):
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].save(results_dir, 'checkpoint.pth')
+                    dqn.save(results_dir, 'checkpoint.pth')
 
             state = next_state
 

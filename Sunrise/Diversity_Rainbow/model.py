@@ -94,7 +94,7 @@ class DuelingDQN(nn.Module):
      x = self.conv(x)
      x = x.view(-1, self.conv_output_size)
      v = self.fc_v(F.relu(x))  # Value stream
-     a = self.fc_a(F.relu(x))
+     a = self.fc_a(F.relu(x))  # advantage stream
      q = v + a - a.mean(1, keepdim=True)
      return q
 

@@ -126,6 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
@@ -172,10 +173,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # wandb intialize
-    wandb.init(project="ensemble_schedule",
-               name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-               config=args.__dict__
-               )
+    # wandb.init(project="ensemble_schedule",
+    #            name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+    #            config=args.__dict__
+    #            )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -245,7 +246,7 @@ if __name__ == '__main__':
         dqn = Agent(args, env, model)
         dqn_list.append(dqn)
 
-    # If a model is provided, and evaluate is fale, presumably we want to resume, so try to load memory
+    # If a model is provided, and evaluate is false, presumably we want to resume, so try to load memory
     if args.model is not None and not args.evaluate:
         if not args.memory:
             raise ValueError('Cannot resume training without memory save path. Aborting...')
@@ -304,9 +305,13 @@ if __name__ == '__main__':
                 state, done = env.reset(), False
                 selected_en_index = np.random.randint(args.num_ensemble)
 
-            if T % args.replay_frequency == 0:
-                for en_index in range(args.num_ensemble):
-                    dqn_list[en_index].reset_noise()  # Draw a new set of noisy weights
+#TODO: how to deal with this part?
+            # if T % args.replay_frequency == 0:
+            #     for en_index in range(args.num_ensemble):
+            #         dqn_list[en_index].reset_noise()  # Draw a new set of noisy weights
+
+            if T % args.replay_frequency == 0 and model == 'NoisyDQN':
+                dqn.reset_noise()
 
             # UCB exploration
             if args.ucb_infer > 0:
@@ -409,17 +414,17 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                                   'eval/action_prob': action_probs_[T-1],
-                                   'eval/reward': reward,
-                                   'eval/Average_reward': avg_reward,
-                                   'eval/timestep': T,
-                                   'Q-value/Q-value': avg_Q,
-                                   'Q-value/batch-loss': batch_loss,
-                                   'Q-value/batch-std-Q-mean': std_Q_mean,
-                                   'Q-value/batch-std-Q-min': std_Q_min,
-                                   'Q-value/batch-std-Q-max': std_Q_max,
-                                   },step=T)
+                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                        #            'eval/action_prob': action_probs_[T-1],
+                        #            'eval/reward': reward,
+                        #            'eval/Average_reward': avg_reward,
+                        #            'eval/timestep': T,
+                        #            'Q-value/Q-value': avg_Q,
+                        #            'Q-value/batch-loss': batch_loss,
+                        #            'Q-value/batch-std-Q-mean': std_Q_mean,
+                        #            'Q-value/batch-std-Q-min': std_Q_min,
+                        #            'Q-value/batch-std-Q-max': std_Q_max,
+                        #            },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

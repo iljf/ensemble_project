@@ -258,7 +258,7 @@ if __name__ == '__main__':
         if done:
             state, done = env.reset(), False
         next_state, _, done = env.step(np.random.randint(0, action_space))
-        val_mem.append(state, -1, 0.0, done)
+        val_mem.append(state, None, None, done)
         state = next_state
         T += 1
 
@@ -283,7 +283,6 @@ if __name__ == '__main__':
 
             if done:
                 state, done = env.reset(), False
-                selected_en_index = np.random.randint(args.num_ensemble)
 
             if T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
                 dqn.reset_noise()  # Draw a new set of noisy weights

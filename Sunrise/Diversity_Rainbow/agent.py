@@ -74,8 +74,7 @@ class Agent():
             if self.model == 'DistributionalDQN':
                 return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
             else:
-                return self.online_net(state.unsqueeze(0))
-
+                return self.online_net(state.unsqueeze(0)).argmax(1).item()
     # Get Q-function
     def ensemble_q(self, state):
         with torch.no_grad():
@@ -109,10 +108,14 @@ class Agent():
 
         # Get current Q estimates from the online network
         current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-
+        nonterminals = nonterminals.squeeze(-1)
         with torch.no_grad():
-            # Get max Q value for the next state from the target network
-            max_next_q_values = self.target_net(next_states).max(1)[0]
+            # Select actions with the highest Q-values for the next states using the online network
+            next_actions = self.online_net(next_states).argmax(1)
+
+            # Get the Q-values for those actions from the target network
+            max_next_q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
+
             # Calculate the target Q values
             target_q_values = rewards + (nonterminals * self.discount * max_next_q_values)
 
@@ -121,11 +124,14 @@ class Agent():
 
         # Optimize the model
         self.online_net.zero_grad()
-        loss.backward()
+        (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
         self.optimiser.step()
 
+        # Convert the loss to an array and replicate it across the batch
+        loss_array = np.full(len(idxs), loss.detach().cpu().item())
+
         # Optionally, update priorities in the memory (if using prioritized experience replay)
-        mem.update_priorities(idxs, loss.detach().cpu().numpy())
+        mem.update_priorities(idxs, loss_array)
 
     def DDQN_learn(self, mem):
         # Sample transitions
@@ -133,7 +139,7 @@ class Agent():
 
         # Get current Q estimates from the online network
         current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-
+        nonterminals = nonterminals.squeeze(-1)
         with torch.no_grad():
             # Get the actions that maximize the Q-values for the next states from the online network
             next_actions = self.online_net(next_states).max(1)[1]

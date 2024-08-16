@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 from torch import optim
+import torch.nn.functional as F
 
 from model import DQN, DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN
 
@@ -69,7 +70,10 @@ class Agent():
     # Acts based on single state (no batch)
     def act(self, state):
         with torch.no_grad():
-            return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
+            if self.model == 'DistributionalDQN':
+                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
+            else:
+                return self.online_net(state.unsqueeze(0)).argmax(1).item()
 
     # Get Q-function
     def ensemble_q(self, state):
@@ -94,9 +98,65 @@ class Agent():
     # Compute Q-value
     def get_online_q(self, states):
         with torch.no_grad():
-            pns = self.online_net(states.unsqueeze(0))
-            dns = self.support.expand_as(pns) * pns
-        return dns.sum(2)
+            if self.online_net == DistributionalDQN or DQN:
+                pns = self.online_net(states.unsqueeze(0))
+                dns = self.support.expand_as(pns) * pns
+                return dns.sum(2)
+            else:
+                q_values = self.online_net(states.unsqueeze(0))
+                return q_values
+
+
+
+    def DQNV_learn(self, mem):
+        # Sample transitions
+        idxs, states, actions, rewards, next_states, nonterminals, weights = mem.sample(self.batch_size)
+
+        # Get current Q estimates from the online network
+        current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        nonterminals = nonterminals.squeeze(-1)
+
+        with torch.no_grad():
+            # DQN에서는 target_net에서 최대 Q 값을 바로 가져옴
+            max_next_q_values = self.target_net(next_states).max(1)[0]
+
+            # Calculate the target Q values
+            target_q_values = rewards + (nonterminals * self.discount * max_next_q_values)
+
+        # Calculate the loss as the mean squared error between current and target Q values
+        loss = F.mse_loss(current_q_values, target_q_values)
+
+        # Optimize the model
+        self.online_net.zero_grad()
+        (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+        self.optimiser.step()
+
+    def DDQN_learn(self, mem):
+        # Sample transitions
+        idxs, states, actions, rewards, next_states, nonterminals, weights = mem.sample(self.batch_size)
+
+        # Get current Q estimates from the online network
+        current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+        nonterminals = nonterminals.squeeze(-1)
+
+        with torch.no_grad():
+            # Select actions with the highest Q-values for the next states using the online network (DDQN difference)
+            next_actions = self.online_net(next_states).argmax(1)
+
+            # Get the Q-values for those actions from the target network (DDQN difference)
+            max_next_q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
+
+            # Calculate the target Q values
+            target_q_values = rewards + (nonterminals * self.discount * max_next_q_values)
+
+        # Calculate the loss as the mean squared error between current and target Q values
+        loss = F.mse_loss(current_q_values, target_q_values)
+
+        # Optimize the model
+        self.online_net.zero_grad()
+        (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+        self.optimiser.step()
+
 
     def learn(self, mem):
         # Sample transitions
@@ -190,7 +250,10 @@ class Agent():
     # Evaluates Q-value based on single state (no batch)
     def evaluate_q(self, state):
         with torch.no_grad():
-            return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
+            if isinstance(self.online_net, DistributionalDQN) or (self.online_net, DQN):
+               return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
+            else:
+                return self.online_net(state.unsqueeze(0)).argmax(1)[0].item()
 
     def train(self):
         self.online_net.train()

@@ -126,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks')
+    parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--V-max', type=float, default=10, metavar='V', help='Maximum of value distribution support')
     parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
     parser.add_argument('--memory-capacity', type=int, default=int(500000), metavar='CAPACITY', help='Experience replay memory capacity')
-    parser.add_argument('--replay-frequency', type=int, default=1, metavar='k', help='Frequency of sampling from memory')
+    parser.add_argument('--replay-frequency', type=int, default=4, metavar='k', help='Frequency of sampling from memory')
     parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='ω', help='Prioritised experience replay exponent (originally denoted α)')
     parser.add_argument('--priority-weight', type=float, default=0.4, metavar='β', help='Initial prioritised experience replay importance sampling weight')
     parser.add_argument('--multi-step', type=int, default=20, metavar='n', help='Number of steps for multi-step return')
@@ -173,10 +173,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # wandb intialize
-    # wandb.init(project="ensemble_schedule",
-    #            name="Rainbow_" + args.game + " " + "Seed" + str(args.seed) + " " + args.model_name,
-    #            config=args.__dict__
-    #            )
+    wandb.init(project="diverse_rainbow",
+               name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
+               config=args.__dict__
+               )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -315,13 +315,13 @@ if __name__ == '__main__':
                     log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                     dqn.train()
 
-                    # wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                    #             'eval/action_prob': action_probs_[T-1],
-                    #             'eval/reward': reward,
-                    #             'eval/Average_reward': avg_reward,
-                    #             'eval/timestep': T,
-                    #             'Q-value/Q-value': avg_Q,
-                    #              },step=T)
+                    wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                                'eval/action_prob': action_probs_[T-1],
+                                'eval/reward': reward,
+                                'eval/Average_reward': avg_reward,
+                                'eval/timestep': T,
+                                'Q-value/Q-value': avg_Q,
+                                 },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

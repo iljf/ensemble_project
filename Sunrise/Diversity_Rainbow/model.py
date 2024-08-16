@@ -132,10 +132,16 @@ class DistributionalDQN(nn.Module):
     self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
     self.fc2 = nn.Linear(args.hidden_size, action_space * self.atoms)
 
-  def forward(self, x):
-    x = self.convs(x)
+  def forward(self, x, log=False):
+    x = self.conv(x)
     x = x.view(-1, self.conv_output_size)
-    x = F.softmax(x, dim=2)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    x = x.view(-1, self.action_space, self.atoms)
+    if log:
+      x = F.log_softmax(x, dim=2)
+    else:
+      x = F.softmax(x, dim=2)
     return x
 
 class DQN(nn.Module):

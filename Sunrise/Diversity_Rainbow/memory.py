@@ -4,7 +4,6 @@ from collections import namedtuple
 import numpy as np
 import torch
 
-
 Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal'))
 blank_trans = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0, False)
 
@@ -62,6 +61,16 @@ class SegmentTree():
 
     def total(self):
         return self.sum_tree[0]
+
+class Replaybuffer():
+    def __init__(self, args, capacity):
+        self.device = args.device
+        self.capacity = capacity
+        self.history = args.history_length
+        self.discount = args.discount
+        self.n = args.multi_step
+        self.t = 0
+
 
 class ReplayMemory():
     def __init__(self, args, capacity):

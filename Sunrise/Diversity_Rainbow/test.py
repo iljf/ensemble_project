@@ -11,14 +11,27 @@ from util_wrapper import Rewardvalue, Action_random
 from env import Env
 
 # Test DQN
-def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
+def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False, scheduler=None, action_p=None):
     env = Env(args)
+    env = Rewardvalue(env)
+    env = Action_random(env, eps=0.1)
     env.eval()
     metrics['steps'].append(T)
     T_rewards, T_Qs = [], []
 
+    env.eps = env.eps
+    env.env.reward_mode = env.env.reward_mode
+
     # Test performance over several episodes
     done = True
+
+    for episode_num in range(args.evaluation_episodes):
+        reward_mode = scheduler
+        action_probs = action_p
+        env.env.reward_mode = reward_mode
+        env.eps = action_probs
+
+
     for _ in range(args.evaluation_episodes):
         while True:
             if done:

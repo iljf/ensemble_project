@@ -133,8 +133,11 @@ class DistributionalDQN(nn.Module):
     self.fc2 = nn.Linear(args.hidden_size, action_space * self.atoms)
 
   def forward(self, x):
-    x = self.convs(x)
+    x = self.conv(x)
     x = x.view(-1, self.conv_output_size)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    x = x.view(-1, self.action_space, self.atoms)
     x = F.softmax(x, dim=2)
     return x
 

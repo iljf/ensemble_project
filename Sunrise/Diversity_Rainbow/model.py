@@ -97,6 +97,7 @@ class DuelingDQN(nn.Module):
      a = self.fc_a(F.relu(x))  # advantage stream
      q = v + a - a.mean(1, keepdim=True)
      return q
+     # return a+v
 
 class NoisyDQN(nn.Module):
   def __init__(self, args, action_space):

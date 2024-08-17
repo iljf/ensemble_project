@@ -16,7 +16,7 @@ class SegmentTree():
         self.full = False  # Used to track actual capacity
         self.sum_tree = np.zeros((2 * size - 1, ), dtype=np.float32)  # Initialise fixed size tree with all (priority) zeros
         self.data = np.array([None] * size)  # Wrap-around cyclic buffer
-        self.max = 1  # Initial max value to return (1 = 1^ω)
+        self.max = 1  #1# Initial max value to return (1 = 1^ω)
 
     # Propagates value up tree given a tree index
     def _propagate(self, index, value):
@@ -145,7 +145,8 @@ class ReplayMemory():
 
 
     def update_priorities(self, idxs, priorities):
-        priorities = np.power(priorities, self.priority_exponent)
+        # priorities = np.power(priorities, self.priority_exponent)
+        priorities = np.power(priorities*1e6, self.priority_exponent)
         [self.transitions.update(idx, priority) for idx, priority in zip(idxs, priorities)]
 
     # Set up internal state for iterator

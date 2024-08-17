@@ -126,8 +126,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
-    # parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks')
+    # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
+    parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-    parser.add_argument('--learn-start', type=int, default=int(1600), metavar='STEPS', help='Number of steps before starting training')
+    parser.add_argument('--learn-start', type=int, default=int(100), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
     parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
@@ -298,16 +298,17 @@ if __name__ == '__main__':
             # Train and test
             if T >= args.learn_start:
                 mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
-                if T % args.replay_frequency == 0 and args.model_name == 'DQNV':
-                    dqn.DQNV_learn(mem)  # Train DQN
-                elif T % args.replay_frequency == 0 and args.model_name == 'DDQN':
-                    dqn.DDQN_learn(mem)  # Train DDQN
-                elif T % args.replay_frequency == 0 and args.model_name == 'DuelingDQN':
-                    dqn.DDQN_learn(mem)
-                elif T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
-                    dqn.DDQN_learn(mem)
-                elif T % args.replay_frequency == 0 and args.model_name == 'DistributionalDQN':
-                    dqn.learn(mem)
+                # if T % args.replay_frequency == 0 and args.model_name == 'DQNV':
+                #     dqn.DQNV_learn(mem)  # Train DQN
+                # elif T % args.replay_frequency == 0 and args.model_name == 'DDQN':
+                #     dqn.DDQN_learn(mem)  # Train DDQN
+                # elif T % args.replay_frequency == 0 and args.model_name == 'DuelingDQN':
+                #     dqn.DDQN_learn(mem)
+                # elif T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
+                #     dqn.DDQN_learn(mem)
+                # elif T % args.replay_frequency == 0 and args.model_name == 'DistributionalDQN':
+                if T % args.replay_frequency == 0:
+                    dqn.learn_by_name(mem, args.model_name)
 
 
                 if T % args.evaluation_interval == 0:

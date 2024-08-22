@@ -87,14 +87,19 @@ class DuelingDQN(nn.Module):
     self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
                               nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
     self.conv_output_size = 576
-    self.fc_a = nn.Linear(self.conv_output_size, args.hidden_size)
-    self.fc_v = nn.Linear(self.conv_output_size, 1)
+    self.fc_h_v = nn.Linear(self.conv_output_size, args.hidden_size)
+    self.fc_h_a = nn.Linear(self.conv_output_size, args.hidden_size)
+    self.fc_f_v = nn.Linear(args.hidden_size, 1)
+    self.fc_f_a = nn.Linear(args.hidden_size, action_space)
 
   def forward(self, x):
      x = self.conv(x)
      x = x.view(-1, self.conv_output_size)
-     v = self.fc_v(F.relu(x))  # Value stream
-     a = self.fc_a(F.relu(x))  # advantage stream
+     v = F.relu(self.fc_h_v(x))
+     v = self.fc_f_v(v)
+     a = F.relu(self.fc_h_a(x))
+     a = self.fc_f_a(a)
+     v, a = v.view(-1, 1,), a.view(-1, self.action_space)
      q = v + a - a.mean(1, keepdim=True)
      return q
      # return a+v

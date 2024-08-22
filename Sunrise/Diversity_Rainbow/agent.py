@@ -66,7 +66,8 @@ class Agent():
             raise ValueError("wtf")
     # Resets noisy weights in all linear layers (of online net only)
     def reset_noise(self):
-        self.online_net.reset_noise()
+        if self.model == 'NoisyDQN':
+            self.online_net.reset_noise()
 
     # Acts based on single state (no batch)
     def act(self, state):
@@ -87,20 +88,28 @@ class Agent():
     # Compute targe Q-value
     def get_target_q(self, next_states):
         with torch.no_grad():
-            pns = self.online_net(next_states)
-            dns = self.support.expand_as(pns) * pns
-            argmax_indices_ns = dns.sum(2).argmax(1)
-            pns = self.target_net(next_states)
-            pns_a = pns[range(self.batch_size), argmax_indices_ns]
-            pns_a = pns_a * self.support.expand_as(pns_a)
-        return pns_a.sum(1)
+            if self.model == 'DistributionalDQN':
+                pns = self.online_net(next_states)
+                dns = self.support.expand_as(pns) * pns
+                argmax_indices_ns = dns.sum(2).argmax(1)
+                pns = self.target_net(next_states)
+                pns_a = pns[range(self.batch_size), argmax_indices_ns]
+                pns_a = pns_a * self.support.expand_as(pns_a)
+                return pns_a.sum(1)
+            else:
+                q_values = self.target_net(next_states)
+                return q_values.argmax(1)
 
     # Compute Q-value
     def get_online_q(self, states):
         with torch.no_grad():
-            pns = self.online_net(states.unsqueeze(0))
-            dns = self.support.expand_as(pns) * pns
-        return dns.sum(2)
+            if self.model == 'DistributionalDQN':
+                pns = self.online_net(states.unsqueeze(0))
+                dns = self.support.expand_as(pns) * pns
+                return dns.sum(2)
+            else:
+                q_values = self.online_net(states.unsqueeze(0))
+                return q_values
 
     def DQNV_learn(self, mem):
         # Sample transitions
@@ -138,20 +147,17 @@ class Agent():
 
         # Get current Q estimates from the online network
         current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
-        nonterminals = nonterminals.squeeze(-1)
 
         with torch.no_grad():
             # Select actions with the highest Q-values for the next states using the online network (DDQN difference)
             next_actions = self.online_net(next_states).argmax(1)
-
             # Get the Q-values for those actions from the target network (DDQN difference)
             max_next_q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
-
             # Calculate the target Q values
-            target_q_values = rewards + (nonterminals * self.discount * max_next_q_values)
+            target_q_values = rewards + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-        # Calculate the loss as the mean squared error between current and target Q values
-        loss = F.mse_loss(current_q_values, target_q_values)
+        td_error = target_q_values - current_q_values
+        loss = torch.abs(td_error)
 
         # Optimize the model
         self.online_net.zero_grad()
@@ -159,7 +165,7 @@ class Agent():
         self.optimiser.step()
 
         # Optionally, update priorities in the memory (if using prioritized experience replay)
-        # mem.update_priorities(idxs, loss.detach().cpu().numpy())
+        mem.update_priorities(idxs, loss.detach().cpu().numpy())
 
 
     def learn_by_name(self, mem, model_name):
@@ -200,28 +206,50 @@ class Agent():
             self.online_net.zero_grad()
             (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
             self.optimiser.step()
+
+            mem.update_priorities(idxs, loss.detach().cpu().numpy())
+
         elif model_name == "DQNV":
             # Get current Q estimates from the online network
             current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
 
             with torch.no_grad():
-                # DQN에서는 target_net에서 최대 Q 값을 바로 가져옴
+                # Max q value from target_net
                 max_next_q_values = self.target_net(next_states).max(1)[0]
-                # Calculate the target Q values
+                # Calculate the target Q values : target_q = reward + (1 - done) * discount * max_next_q_values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            # Calculate the loss as the mean squared error between current and target Q values
-            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
-            # loss = [torch.power(current_q_values[i] - target_q_values[i], 2) for i in range(len(current_q_values))]
-            loss = torch.stack(loss)
+            td_error = target_q_values - current_q_values  # L1 loss
+            loss = torch.abs(td_error)  # torch.abs computes the absolute value of each element.
 
             # Optimize the model
             self.online_net.zero_grad()
             (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
             self.optimiser.step()
 
-        mem.update_priorities(idxs, loss.detach().cpu().numpy())  # Update priorities of sampled transitions
+            mem.update_priorities(idxs, loss.detach().cpu().numpy())
 
+        elif model_name in ('DDQN', 'DuelingDQN', 'NoisyDQN'):
+            # Get current Q estimates from the online network
+            current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
+
+            with torch.no_grad():
+                # Select actions with the highest Q-values for the next states using the online network (DDQN difference)
+                next_actions = self.online_net(next_states).argmax(1)
+                # Get the Q-values for those actions from the target network (DDQN difference)
+                max_next_q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
+                # Calculate the target Q values
+                target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
+
+            td_error = target_q_values - current_q_values
+            loss = torch.abs(td_error)
+
+            # Optimize the model
+            self.online_net.zero_grad()
+            (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+            self.optimiser.step()
+
+            mem.update_priorities(idxs, loss.detach().cpu().numpy())
 
     def learn(self, mem):
         # Sample transitions

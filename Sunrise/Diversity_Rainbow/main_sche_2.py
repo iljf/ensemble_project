@@ -150,7 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-    parser.add_argument('--learn-start', type=int, default=int(100), metavar='STEPS', help='Number of steps before starting training')
+    parser.add_argument('--learn-start', type=int, default=int(20000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
     parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')

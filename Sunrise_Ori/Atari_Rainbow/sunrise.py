@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='crazy_climber', choices=atari_py.list_games(), help='ATARI game')
+parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
 parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -66,10 +66,10 @@ parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB t
 # Setup
 args = parser.parse_args()
 
-wandb.init(project="Rainbow_sunrise_ref",
-           name="S_v_t500k" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-               config=args.__dict__
-               )
+# wandb.init(project="Rainbow_sunrise_ref",
+#            name="S_v_t500k" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+#                config=args.__dict__
+#                )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -258,11 +258,11 @@ else:
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].train()  # Set DQN (online network) back to training mode
-                wandb.log({'eval/reward': reward,
-                           'eval/Average_reward': avg_reward,
-                           'eval/timestep': T,
-                           'eval/Q-value': avg_Q
-                           }, step=T)
+                # wandb.log({'eval/reward': reward,
+                #            'eval/Average_reward': avg_reward,
+                #            'eval/timestep': T,
+                #            'eval/Q-value': avg_Q
+                #            }, step=T)
                 # If memory path provided, save it
                 if args.memory is not None:
                     save_memory(mem, args.memory, args.disable_bzip_memory)

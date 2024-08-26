@@ -90,7 +90,7 @@ ENV/
 
 # Saved models
 *.pth
-sunrise/results/
+mmodel/results/
 # Plots
 *.html
 

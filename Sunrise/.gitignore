@@ -90,7 +90,7 @@ ENV/
 
 # Saved models
 *.pth
-Atari_Rainbow/results/
+Sunrise/results/
 # Plots
 *.html
 
@@ -103,3 +103,4 @@ MANIFEST
 *.egg-info
 \.idea/
 OpenAIGym_SAC/data/
+wandb/

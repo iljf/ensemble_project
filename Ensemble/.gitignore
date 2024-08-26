@@ -90,7 +90,7 @@ ENV/
 
 # Saved models
 *.pth
-Atari_Rainbow/results/
+sunrise/results/
 # Plots
 *.html
 

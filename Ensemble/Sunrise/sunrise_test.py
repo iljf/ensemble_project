@@ -137,7 +137,7 @@ if __name__ == '__main__':
     parser.add_argument('--V-min', type=float, default=-10, metavar='V', help='Minimum of value distribution support')
     parser.add_argument('--V-max', type=float, default=10, metavar='V', help='Maximum of value distribution support')
     parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
-    parser.add_argument('--memory-capacity', type=int, default=int(500000), metavar='CAPACITY', help='Experience replay memory capacity')
+    parser.add_argument('--memory-capacity', type=int, default=int(1e6), metavar='CAPACITY', help='Experience replay memory capacity')
     parser.add_argument('--replay-frequency', type=int, default=1, metavar='k', help='Frequency of sampling from memory')
     parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='ω', help='Prioritised experience replay exponent (originally denoted α)')
     parser.add_argument('--priority-weight', type=float, default=0.4, metavar='β', help='Initial prioritised experience replay importance sampling weight')
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-    parser.add_argument('--learn-start', type=int, default=int(100000), metavar='STEPS', help='Number of steps before starting training')
+    parser.add_argument('--learn-start', type=int, default=int(130000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--learn-end', type=int, default=int(200000), metavar='STEPS', help='Number of steps training ends')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
     parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
@@ -169,16 +169,14 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.7, help='min action probability')
-    parser.add_argument('--interaction-start', type=int, default=100000, help='agents interact with the env')
-
     # Setup
     args = parser.parse_args()
 
     # wandb intialize
-    wandb.init(project="eclt",
-               name="S_" + "100k-200k_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-               config=args.__dict__
-               )
+    # wandb.init(project="diverse_rainbow",
+    #            name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+    #            config=args.__dict__
+    #            )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -235,17 +233,8 @@ if __name__ == '__main__':
 
     # Agent
     dqn_list = []
-    # for _ in range(args.num_ensemble):
-    #     dqn = Agent(args, env)
-    #     dqn_list.append(dqn)
-
-    #TODO: Diverse models
-    # args.num_ensemble 수 만큼 agent를 생성하고 i % len(models) 만큼 할당
-    # Each agent with diff models
-    models = ['DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
-    for i in range(args.num_ensemble):
-        model = models[i % len(models)]
-        dqn = Agent(args, env, model)
+    for _ in range(args.num_ensemble):
+        dqn = Agent(args, env)
         dqn_list.append(dqn)
 
     # If a model is provided, and evaluate is false, presumably we want to resume, so try to load memory
@@ -298,7 +287,7 @@ if __name__ == '__main__':
 
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
-            if T >= args.interaction_start:
+            if T >= 100000:
                 env.eps = action_probs_[T-1]
                 env.env.reward_mode = reward_mode_[T-1]
                 action_p = env.eps
@@ -308,14 +297,9 @@ if __name__ == '__main__':
                     state, done = env.reset(), False
                     selected_en_index = np.random.randint(args.num_ensemble)
 
-    #TODO: how to deal with this part?
-                # if T % args.replay_frequency == 0:
-                #     for en_index in range(args.num_ensemble):
-                #         dqn_list[en_index].reset_noise()  # Draw a new set of noisy weights
-            if T >= args.learn_start and T <= args.learn_end:
+            if T>= args.learn_start and T <= args.learn_end:
                 if T % args.replay_frequency == 0:
                     dqn.reset_noise()
-
 
                 # UCB exploration
                 if args.ucb_infer > 0:
@@ -348,7 +332,6 @@ if __name__ == '__main__':
                 mem.append(state, action, reward, done)  # Append transition to memory
 
                 # Train and test
-                # if T >= args.learn_start:
                 if T >= args.learn_start:
                     mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
                     if T % args.replay_frequency == 0:
@@ -387,16 +370,12 @@ if __name__ == '__main__':
                             # std_Q mean
                             std_Q_mean = sum(std_Q) / len(std_Q)
 
-                            # σ(x) mmodel paper
-                            # weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
+                            weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
 
-
-                            # σ(-x)
-                            weight_Q = torch.sigmoid(std_Q*args.temperature) + 0.5
 
                         for en_index in range(args.num_ensemble):
                             # Train with n-step distributional double-Q learning
-                            q_loss, batch_loss = dqn_list[en_index].diversity_learn(idxs, states, actions, returns,
+                            q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
                                                                        next_states, nonterminals, weights,
                                                                        masks[:, en_index], weight_Q)
                             if en_index == 0:
@@ -419,17 +398,17 @@ if __name__ == '__main__':
                         for en_index in range(args.num_ensemble):
                             dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                            wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                                       'eval/action_prob': action_probs_[T-1],
-                                       'eval/reward': reward,
-                                       'eval/Average_reward': avg_reward,
-                                       'eval/timestep': T,
-                                       'Q-value/Q-value': avg_Q,
-                                       'Q-value/batch-loss': batch_loss,
-                                       'Q-value/batch-std-Q-mean': std_Q_mean,
-                                       'Q-value/batch-std-Q-min': std_Q_min,
-                                       'Q-value/batch-std-Q-max': std_Q_max,
-                                       },step=T)
+                            # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                            #            'eval/action_prob': action_probs_[T-1],
+                            #            'eval/reward': reward,
+                            #            'eval/Average_reward': avg_reward,
+                            #            'eval/timestep': T,
+                            #            'Q-value/Q-value': avg_Q,
+                            #            'Q-value/batch-loss': batch_loss,
+                            #            'Q-value/batch-std-Q-mean': std_Q_mean,
+                            #            'Q-value/batch-std-Q-min': std_Q_min,
+                            #            'Q-value/batch-std-Q-max': std_Q_max,
+                            #            },step=T)
 
                         # If memory path provided, save it
                         if args.memory is not None:

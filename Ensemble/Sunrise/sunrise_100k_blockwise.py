@@ -168,14 +168,14 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.7, help='min action probability')
+    parser.add_argument('--block-id', type=int, default=1, help='testing schedule block')
     # Setup
     args = parser.parse_args()
 
-    # wandb intialize
-    # wandb.init(project="diverse_rainbow",
-    #            name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-    #            config=args.__dict__
-    #            )
+    wandb.init(project="eclt",
+               name="S_" + args.game + " " + str(args.block_id) + "_Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+               config=args.__dict__
+               )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -253,7 +253,7 @@ if __name__ == '__main__':
     # scheduler
     global_seed_initailizer(args.seed)
     reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
-    block_id = 1 # second block
+    block_id = args.block_id # second block
     reward_mode_, action_probs_ = reward_mode_[(block_id)*int(100e3):(block_id+1)*int(100e3)], action_probs_[(block_id)*int(100e3):(block_id+1)*int(100e3)]
 
     # reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max], debug=True)
@@ -398,17 +398,17 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                        #            'eval/action_prob': action_probs_[T-1],
-                        #            'eval/reward': reward,
-                        #            'eval/Average_reward': avg_reward,
-                        #            'eval/timestep': T,
-                        #            'Q-value/Q-value': avg_Q,
-                        #            'Q-value/batch-loss': batch_loss,
-                        #            'Q-value/batch-std-Q-mean': std_Q_mean,
-                        #            'Q-value/batch-std-Q-min': std_Q_min,
-                        #            'Q-value/batch-std-Q-max': std_Q_max,
-                        #            },step=T)
+                        wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                                   'eval/action_prob': action_probs_[T-1],
+                                   'eval/reward': reward,
+                                   'eval/Average_reward': avg_reward,
+                                   'eval/timestep': T,
+                                   'Q-value/Q-value': avg_Q,
+                                   'Q-value/batch-loss': batch_loss,
+                                   'Q-value/batch-std-Q-mean': std_Q_mean,
+                                   'Q-value/batch-std-Q-min': std_Q_min,
+                                   'Q-value/batch-std-Q-max': std_Q_max,
+                                   },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

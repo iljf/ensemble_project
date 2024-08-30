@@ -79,7 +79,7 @@ class Agent():
     # Get Q-function
     def ensemble_q(self, state):
         with torch.no_grad():
-            if isinstance(self.online_net, (DistributionalDQN, DQN)):
+            if isinstance(self.online_net, (DistributionalDQN)):
                 return (self.online_net(state.unsqueeze(0)) * self.support).sum(2)
             else:
                 return self.online_net(state.unsqueeze(0))

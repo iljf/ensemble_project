@@ -151,12 +151,14 @@ class Agent():
         loss = -torch.sum(m * log_ps_a, 1)  # Cross-entropy loss (minimises DKL(m||p(s_t, a_t)))
         self.online_net.zero_grad()
         if weight_Q is None:
-            (weights* masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+            (weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+            batch_loss = (weights * masks * loss).mean()
         else:
             (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+            batch_loss = (weight_Q * weights * masks * loss).mean()
         self.optimiser.step()
-        
-        return loss.detach().cpu().numpy()
+
+        return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item()
 
     def update_target_net(self):
         self.target_net.load_state_dict(self.online_net.state_dict())

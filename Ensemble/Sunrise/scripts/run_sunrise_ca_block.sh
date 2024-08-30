@@ -1,0 +1,3 @@
+for block_id in 1 2; do
+    python sunrise_100k_blockwise.py --game $1 --num-ensemble 5 --seed 122 --block-id $block_id  --target-update 8000 --T-max 100000 --learn-start 20000 --memory-capacity 1000000 --replay-frequency 4 --multi-step 3 --architecture canonical --hidden-size 512 --learning-rate 0.0000625 --evaluation-interval 1000 --id block_test --beta-mean $2 --temperature $3 --ucb-infer $4
+done

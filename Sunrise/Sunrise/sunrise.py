@@ -20,11 +20,11 @@ from test import ensemble_test
 
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
 parser = argparse.ArgumentParser(description='Rainbow')
-parser.add_argument('--id', type=str, default='boot_rainbow', help='Experiment ID')
+parser.add_argument('--id', type=str, default='s_cn', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=122, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
 parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-parser.add_argument('--T-max', type=int, default=int(50e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
+parser.add_argument('--T-max', type=int, default=int(300e3), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -47,7 +47,7 @@ parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help
 parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
 parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-parser.add_argument('--evaluation-interval', type=int, default=10000, metavar='STEPS', help='Number of training steps between evaluations')
+parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
 # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
 parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -61,13 +61,13 @@ parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Nu
 parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
 parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
 parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
-parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB train')
+parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB train')
 
 # Setup
 args = parser.parse_args()
 
-wandb.init(project="ensemble_testing",
-           name="S_" + "v_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+wandb.init(project="s_r_ref",
+           name="S_" + "cn_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
                config=args.__dict__
                )
 
@@ -234,11 +234,15 @@ else:
                         temp_count += 1
                     var_Q = var_Q / temp_count
                     std_Q = torch.sqrt(var_Q).detach()
+
+                    std_Q_max = max(std_Q)
+                    std_Q_min = min(std_Q)
+                    std_Q_mean = sum(std_Q) / len(std_Q)
                     weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
                     
                 for en_index in range(args.num_ensemble):
                     # Train with n-step distributional double-Q learning
-                    q_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns, 
+                    q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
                                                                next_states, nonterminals, weights, 
                                                                masks[:, en_index], weight_Q)
                     if en_index == 0:
@@ -261,7 +265,11 @@ else:
                 wandb.log({'eval/reward': reward,
                            'eval/Average_reward': avg_reward,
                            'eval/timestep': T,
-                           'eval/Q-value': avg_Q
+                           'Q-value/Q-value': avg_Q,
+                           'Q-value/batch-loss': batch_loss,
+                           'Q-value/batch-std-Q-mean': std_Q_mean,
+                           'Q-value/batch-std-Q-min': std_Q_min,
+                           'Q-value/batch-std-Q-max': std_Q_max,
                            }, step=T)
                 # If memory path provided, save it
                 if args.memory is not None:

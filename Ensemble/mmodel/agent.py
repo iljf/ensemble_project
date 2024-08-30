@@ -214,8 +214,7 @@ class Agent():
                 # Calculate the target Q values : target_q = reward + (1 - done) * discount * max_next_q_values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            td_error = target_q_values - current_q_values
-            loss = torch.abs(td_error)
+            loss = F.mse_loss(target_q_values - current_q_values)
 
             # Optimize the model
             self.online_net.zero_grad()
@@ -240,8 +239,7 @@ class Agent():
                 # Calculate the target Q values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            td_error = target_q_values - current_q_values
-            loss = torch.abs(td_error)
+            loss = F.mse_loss(target_q_values - current_q_values)
 
             # Optimize the model
             self.online_net.zero_grad()

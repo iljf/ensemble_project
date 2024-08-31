@@ -122,14 +122,13 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='Diverse_Rainbow', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='block_rainbow', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    # parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--T-max', type=int, default=int(100e3), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='data-efficient', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -139,11 +138,11 @@ if __name__ == '__main__':
     parser.add_argument('--V-min', type=float, default=-10, metavar='V', help='Minimum of value distribution support')
     parser.add_argument('--V-max', type=float, default=10, metavar='V', help='Maximum of value distribution support')
     parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
-    parser.add_argument('--memory-capacity', type=int, default=int(500000), metavar='CAPACITY', help='Experience replay memory capacity')
-    parser.add_argument('--replay-frequency', type=int, default=4, metavar='k', help='Frequency of sampling from memory')
+    parser.add_argument('--memory-capacity', type=int, default=int(100000), metavar='CAPACITY', help='Experience replay memory capacity')
+    parser.add_argument('--replay-frequency', type=int, default=1, metavar='k', help='Frequency of sampling from memory')
     parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='ω', help='Prioritised experience replay exponent (originally denoted α)')
     parser.add_argument('--priority-weight', type=float, default=0.4, metavar='β', help='Initial prioritised experience replay importance sampling weight')
-    parser.add_argument('--multi-step', type=int, default=3, metavar='n', help='Number of steps for multi-step return')
+    parser.add_argument('--multi-step', type=int, default=20, metavar='n', help='Number of steps for multi-step return')
     parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
     parser.add_argument('--target-update', type=int, default=int(2000), metavar='τ', help='Number of steps after which to update target network')
     parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
@@ -163,19 +162,26 @@ if __name__ == '__main__':
     parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)')
     # ensemble
     parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
-    parser.add_argument('--beta-mean', type=float, default=1.0, help='mean of bernoulli')
-    parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
+    parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
+    parser.add_argument('--temperature', type=float, default=10, help='temperature for CF')
     parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.7, help='min action probability')
+    parser.add_argument('--block-id', type=int, default=0, help='testing schedule block')
+
     # Setup
     args = parser.parse_args()
 
-    # wandb intialize
-    wandb.init(project="diverse_rainbow",
-               name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
+    if args.id == 'Diverse_rainbow':
+        wandb.init(project="diverse_rainbow",
+                   name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
+                   config=args.__dict__
+                   )
+    elif args.id == 'block_rainbow':
+        wandb.init(project="eclt",
+               name=args.model_name + "_r_ " + args.game + "_b_" + str(args.block_id) + "_Seed" + str(args.seed),
                config=args.__dict__
                )
 
@@ -250,6 +256,8 @@ if __name__ == '__main__':
     # scheduler
     global_seed_initailizer(args.seed)
     reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
+    block_id = args.block_id # 0 = 0~100k, 1 = 100k~200k, 2 = 200k~300k
+    reward_mode_, action_probs_ = reward_mode_[(block_id)*int(100e3):(block_id+1)*int(100e3)], action_probs_[(block_id)*int(100e3):(block_id+1)*int(100e3)]
     # reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max], debug=True)
 
     # Construct validation memory
@@ -308,7 +316,9 @@ if __name__ == '__main__':
                 #     dqn.DDQN_learn(mem)
                 # elif T % args.replay_frequency == 0 and args.model_name == 'DistributionalDQN':
                 if T % args.replay_frequency == 0:
-                    dqn.learn_by_name(mem, args.model_name)
+                    batch_loss = dqn.learn_by_name(mem, args.model_name)
+
+
 
 
                 if T % args.evaluation_interval == 0:
@@ -323,6 +333,7 @@ if __name__ == '__main__':
                                 'eval/Average_reward': avg_reward,
                                 'eval/timestep': T,
                                 'Q-value/Q-value': avg_Q,
+                                'Q-value/batch-loss': batch_loss
                                  },step=T)
 
                     # If memory path provided, save it

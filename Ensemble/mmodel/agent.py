@@ -203,7 +203,7 @@ class Agent():
                 (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weight_Q * weights * masks * loss).mean()
             self.optimiser.step()
-            # wandb.log({'Agent/DistributionalDQN_loss': batch_loss.detach().cpu().item()})
+
 
         elif isinstance(self.online_net, (DQNV)):
             current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
@@ -214,7 +214,8 @@ class Agent():
                 # Calculate the target Q values : target_q = reward + (1 - done) * discount * max_next_q_values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            loss = F.mse_loss(target_q_values - current_q_values)
+            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
+            loss = torch.stack(loss)
 
             # Optimize the model
             self.online_net.zero_grad()
@@ -225,7 +226,7 @@ class Agent():
                 (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weight_Q * weights * masks * loss).mean()
             self.optimiser.step()
-            # wandb.log({'Agent/DQNV_loss': batch_loss.detach().cpu().item()})
+
 
         elif isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
             current_q_values = self.online_net(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)
@@ -239,7 +240,8 @@ class Agent():
                 # Calculate the target Q values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            loss = F.mse_loss(target_q_values - current_q_values)
+            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
+            loss = torch.stack(loss)
 
             # Optimize the model
             self.online_net.zero_grad()
@@ -250,12 +252,7 @@ class Agent():
                 (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weight_Q * weights * masks * loss).mean()
             self.optimiser.step()
-            # if isinstance(self.online_net, DDQN):
-            #     wandb.log({'Agent/DDQN_loss': batch_loss.detach().cpu().item()})
-            # elif isinstance(self.online_net, DuelingDQN):
-            #     wandb.log({'Agent/DuelingDQN_loss': batch_loss.detach().cpu().item()})
-            # elif isinstance(self.online_net, NoisyDQN):
-            #     wandb.log({'Agent/NoisyDQN_loss': batch_loss.detach().cpu().item()})
+
         return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item()
 
 

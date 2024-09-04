@@ -71,7 +71,7 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
         
     # Test performance over several episodes
     done = True
-    max_steps = 5000
+    # max_steps = 5000
     ##
     for episode_num in range(args.evaluation_episodes):
         reward_mode = scheduler
@@ -95,7 +95,8 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
             reward_sum += reward
             if args.render:
                 env.render()
-            if done or T >= max_steps:
+            # if done or T >= max_steps:
+            if done:
                 T_rewards.append(reward_sum)
                 break
     env.close()

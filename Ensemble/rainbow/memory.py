@@ -113,7 +113,7 @@ class ReplayMemory():
             sample = np.random.uniform(i * segment, (i + 1) * segment)  # Uniformly sample an element from within a segment
             prob, idx, tree_idx = self.transitions.find(sample)  # Retrieve sample from tree with un-normalised probability
             # Resample if transition straddled current index or probablity 0
-            if (self.transitions.index - idx) % self.capacity > self.n and (idx - self.transitions.index) % self.capacity >= self.history and prob != 0:
+            if(self.transitions.index - idx)  % self.capacity > self.n and (idx - self.transitions.index) % self.capacity >= self.history and prob != 0:
                 valid = True  # Note that conditions are valid but extra conservative around buffer index 0
 
         # Retrieve all required transition data (from t - h to t + n)
@@ -145,8 +145,8 @@ class ReplayMemory():
 
 
     def update_priorities(self, idxs, priorities):
-        # priorities = np.power(priorities, self.priority_exponent)
-        priorities = np.power(priorities*1e6, self.priority_exponent)
+        priorities = np.power(priorities, self.priority_exponent)
+        # priorities = np.power(priorities*100, self.priority_exponent)
         [self.transitions.update(idx, priority) for idx, priority in zip(idxs, priorities)]
 
     # Set up internal state for iterator

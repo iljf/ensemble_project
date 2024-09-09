@@ -221,8 +221,7 @@ class Agent():
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
             # Prioirity selection 때 np.power 로 절대값으로 변환하기에 mse loss 사용
-            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
-            loss = torch.stack(loss)
+            loss = F.mse_loss(current_q_values, target_q_values, reduction='none')
             # td_error = target_q_values - current_q_values  # L1 loss
             # loss = torch.abs(td_error)  # torch.abs computes the absolute value of each element.
 
@@ -247,8 +246,7 @@ class Agent():
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
             # Prioirity selection 때 np.power 로 절대값으로 변환하기에 mse loss 사용
-            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
-            loss = torch.stack(loss)
+            loss = F.mse_loss(current_q_values, target_q_values, reduction='none')
             # td_error = target_q_values - current_q_values
             # loss = torch.abs(td_error)
 

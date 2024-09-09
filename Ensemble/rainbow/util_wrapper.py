@@ -308,7 +308,7 @@ class Rewardvalue(gym.Wrapper):
                 return obs, reward, done
 
         # jump forever
-        if self.env.env_name == 'forstbite':
+        if self.env.env_name == 'frostbite':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
@@ -460,8 +460,6 @@ class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):
         super(Action_random, self).__init__(env)
         self.eps = eps
-        # self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
-        # self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17]
         self.directions = [-1, 0, 1, 2, 3, 4, 5, 6, 7] # NOOP, UP, RIGHT, LEFT, DOWN, UPRIGHT, UPLEFT, DOWNRIGHT
         self.non_fire_actions_ = [3, 4, 5, 6, 7, 8, 9]
         self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]

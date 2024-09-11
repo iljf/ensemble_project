@@ -50,9 +50,15 @@ class DQNV(nn.Module):
   def __init__(self, args, action_space):
     super(DQNV, self).__init__()
     self.action_space = action_space
-    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
-                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
-    self.conv_output_size = 576
+    if args.architecture == 'canonical':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 4, stride=2, padding=0), nn.ReLU(),
+                                 nn.Conv2d(64, 64, 3, stride=1, padding=0), nn.ReLU())
+      self.conv_output_size = 3136
+    elif args.architecture == 'data-efficient':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+      self.conv_output_size = 576
     self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
     self.fc2 = nn.Linear(args.hidden_size, action_space)
 
@@ -67,9 +73,15 @@ class DDQN(nn.Module):
   def __init__(self, args, action_space):
     super(DDQN, self).__init__()
     self.action_space = action_space
-    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
-                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
-    self.conv_output_size = 576
+    if args.architecture == 'canonical':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 4, stride=2, padding=0), nn.ReLU(),
+                                 nn.Conv2d(64, 64, 3, stride=1, padding=0), nn.ReLU())
+      self.conv_output_size = 3136
+    elif args.architecture == 'data-efficient':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+      self.conv_output_size = 576
     self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
     self.fc2 = nn.Linear(args.hidden_size, action_space)
 
@@ -84,9 +96,15 @@ class DuelingDQN(nn.Module):
   def __init__(self, args, action_space):
     super(DuelingDQN, self).__init__()
     self.action_space = action_space
-    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
-                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
-    self.conv_output_size = 576
+    if args.architecture == 'canonical':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 4, stride=2, padding=0), nn.ReLU(),
+                                 nn.Conv2d(64, 64, 3, stride=1, padding=0), nn.ReLU())
+      self.conv_output_size = 3136
+    elif args.architecture == 'data-efficient':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+      self.conv_output_size = 576
     self.fc_h_v = nn.Linear(self.conv_output_size, args.hidden_size)
     self.fc_h_a = nn.Linear(self.conv_output_size, args.hidden_size)
     self.fc_f_v = nn.Linear(args.hidden_size, 1)
@@ -102,15 +120,20 @@ class DuelingDQN(nn.Module):
      v, a = v.view(-1, 1,), a.view(-1, self.action_space)
      q = v + a - a.mean(1, keepdim=True)
      return q
-     # return a+v
 
 class NoisyDQN(nn.Module):
   def __init__(self, args, action_space):
     super(NoisyDQN, self).__init__()
     self.action_space = action_space
-    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
-                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
-    self.conv_output_size = 576
+    if args.architecture == 'canonical':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 4, stride=2, padding=0), nn.ReLU(),
+                                 nn.Conv2d(64, 64, 3, stride=1, padding=0), nn.ReLU())
+      self.conv_output_size = 3136
+    elif args.architecture == 'data-efficient':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+      self.conv_output_size = 576
     self.fc1 = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
     self.fc2 = NoisyLinear(args.hidden_size, action_space, std_init=args.noisy_std)
 
@@ -132,9 +155,15 @@ class DistributionalDQN(nn.Module):
     self.atoms = args.atoms
     self.action_space = action_space
 
-    self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=5, padding=0), nn.ReLU(),
-                              nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
-    self.conv_output_size = 576
+    if args.architecture == 'canonical':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 4, stride=2, padding=0), nn.ReLU(),
+                                 nn.Conv2d(64, 64, 3, stride=1, padding=0), nn.ReLU())
+      self.conv_output_size = 3136
+    elif args.architecture == 'data-efficient':
+      self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0), nn.ReLU(),
+                                 nn.Conv2d(32, 64, 5, stride=5, padding=0), nn.ReLU())
+      self.conv_output_size = 576
     self.fc1 = nn.Linear(self.conv_output_size, args.hidden_size)
     self.fc2 = nn.Linear(args.hidden_size, action_space * self.atoms)
 

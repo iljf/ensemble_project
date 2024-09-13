@@ -125,9 +125,9 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
-    parser.add_argument('--model_name', type=str, default='DuelingDQN', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
-    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(20e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--model_name', type=str, default='NoisyDQN', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
+    parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--T-max', type=int, default=int(10e5), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -259,9 +259,6 @@ if __name__ == '__main__':
     reward_mode_, action_probs_ = reward_mode_[(block_id)*int(20e4):(block_id+1)*int(20e4)], action_probs_[(block_id)*int(20e4):(block_id+1)*int(20e4)]
     # reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max], debug=True)
 
-    reward_prefix, action_prefix = np.repeat(reward_mode_[0],  int(80e3)), np.repeat(action_probs_[0], int(80e3))
-    reward_mode_, action_probs_  = np.concatenate((reward_prefix, reward_mode_[int(80e3):])), np.concatenate((action_prefix, action_probs_[int(80e3):]))
-
     # Construct validation memory
     val_mem = ReplayMemory(args, args.evaluation_size)
     T, done = 0, True
@@ -286,8 +283,8 @@ if __name__ == '__main__':
         T, done = 0, True
 
         while T < args.learn_start:
-            env.eps = action_probs_[T-1]
-            env.env.reward_mode = reward_mode_[T-1]
+            env.eps = action_probs_[T]
+            env.env.reward_mode = reward_mode_[T]
             action_p = env.eps
             scheduler = env.env.reward_mode
 
@@ -305,7 +302,7 @@ if __name__ == '__main__':
             mem.append(state, action, reward, done)  # Append transition to memory
             state = next_state
             T += 1
-        log('T = ' + str(T) + ' / ' + str(args.learn_start))
+        log('Memory:' + ' T = ' + str(T) + ' / ' + str(args.learn_start))
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
             env.eps = action_probs_[T-1]

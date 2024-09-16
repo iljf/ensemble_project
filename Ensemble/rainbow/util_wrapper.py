@@ -320,7 +320,12 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
 
                 else:
-                    shaped_reward = reward
+                    if reward == 10:
+                        shaped_reward = 300
+                    if reward == 200:
+                        shaped_reward = 0
+                    if reward == 160:
+                        shaped_reward = 0
 
                 return obs, shaped_reward, done
             else: # 0
@@ -343,7 +348,16 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
 
                 else:
-                    shaped_reward = reward
+                    if reward == 100:
+                        shaped_reward = 0
+                    if reward == 200:
+                        shaped_reward = 2000
+                    if reward == 400:
+                        shaped_reward = 0
+                    if reward == 800:
+                        shaped_reward = 0
+                    if reward == 0:
+                        shaped_reward = 0
 
                 return obs, shaped_reward, done
             else: # 0
@@ -366,7 +380,17 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 1000
 
                 else:
-                    shaped_reward = reward
+                    if reward == 100:
+                        shaped_reward = 100
+                    elif reward == 200:
+                        shaped_reward = 200
+                    elif reward == 300:
+                        shaped_reward = 300
+                    elif reward == 400:
+                        shaped_reward = 400
+                    elif reward == -100:
+                        shaped_reward = 1000
+
 
                 return obs, shaped_reward, done
             else: # 0
@@ -383,7 +407,10 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 5000
 
                 else:
-                    shaped_reward = reward
+                    if reward in (50, 100, 200, 500):
+                        shaped_reward = 0
+                    if reward == 5000:
+                        shaped_reward = 5000
 
                 return obs, shaped_reward, done
             else: # 0
@@ -400,7 +427,11 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 0
 
                 else:
-                    shaped_reward = reward
+                    if reward == 100:
+                        shaped_reward = 500
+                    if reward == 200:
+                        shaped_reward = 0
+
 
                 return obs, shaped_reward, done
             else: # 0
@@ -419,7 +450,76 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 80
 
                 else:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'alien':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+
+                else:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'krull':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+
+                else:
                     shaped_reward = reward
+
+                return obs, shaped_reward, done
+            else: # reward 0
+                return obs, reward, done
+
+        if self.env.env_name == 'hero':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
+
+                else:
+                    if reward == 10:
+                        shaped_reward = 0
+                    if reward == 30:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 80
 
                 return obs, shaped_reward, done
             else: # 0

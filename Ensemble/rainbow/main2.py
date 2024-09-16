@@ -48,6 +48,12 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'ignore jets'}
         elif env_name == 'bank_heist':
             reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'alien':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
+        elif env_name == 'krull':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
+        elif env_name == 'hero':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
@@ -126,8 +132,8 @@ if __name__ == '__main__':
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='NoisyDQN', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
-    parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(10e5), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--game', type=str, default='hero', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--T-max', type=int, default=int(20e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -145,7 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
     parser.add_argument('--target-update', type=int, default=int(32000), metavar='τ', help='Number of steps after which to update target network')
     parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
-    parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
+    parser.add_argument('--learning-rate', type=float, default=0.0005, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')

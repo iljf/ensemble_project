@@ -281,28 +281,15 @@ class Rewardvalue(gym.Wrapper):
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward == 100:
-                        shaped_reward = 100
-                    if reward == 200:
-                        shaped_reward = 500
-                    if reward == 300:
-                        shaped_reward = 400
-                    if reward == 400:
-                        shaped_reward = 600
-                    if reward == 1000:
-                        shaped_reward = 2000
+                    if reward < 200:
+                        shaped_reward = -10
+                    elif reward >= 200:
+                        shaped_reward = reward * 1.5
                 else:
-                    if reward == 100:
-                        shaped_reward = 100
-                    if reward == 200:
-                        shaped_reward = 500
-                    if reward == 300:
-                        shaped_reward = 400
-                    if reward == 400:
-                        shaped_reward = 600
-                    if reward == 1000:
-                        shaped_reward = 2000
-
+                    if reward < 200:
+                        shaped_reward = -10
+                    elif reward >= 200:
+                        shaped_reward = reward * 1.5
                 return obs, shaped_reward, done
             else: # 0
                 return obs, reward, done
@@ -312,20 +299,15 @@ class Rewardvalue(gym.Wrapper):
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward == 10:
-                        shaped_reward = 300
-                    if reward == 200:
-                        shaped_reward = 0
-                    if reward == 160:
-                        shaped_reward = 0
-
+                    if reward <= 100:
+                        shaped_reward = reward * 5
+                    elif reward >= 160:
+                        shaped_reward = -10
                 else:
-                    if reward == 10:
-                        shaped_reward = 300
-                    if reward == 200:
-                        shaped_reward = 0
-                    if reward == 160:
-                        shaped_reward = 0
+                    if reward <= 100:
+                        shaped_reward = reward * 5
+                    elif reward >= 160:
+                        shaped_reward = -10
 
                 return obs, shaped_reward, done
             else: # 0

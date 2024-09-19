@@ -70,12 +70,17 @@ class Agent():
             self.online_net.reset_noise()
 
     # Acts based on single state (no batch)
+    # code for rainbow
     def act(self, state):
         with torch.no_grad():
             if self.model == 'DistributionalDQN':
                 return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
             else:
                 return self.online_net(state.unsqueeze(0)).argmax(1).item()
+
+    def act_e_greedy_lr(self, state, epsilon=1.0):  # High ε can reduce evaluation scores drastically
+        return np.random.randint(0, self.action_space) if np.random.random() < epsilon else self.act(state)
+
     # Get Q-function
     def ensemble_q(self, state):
         with torch.no_grad():

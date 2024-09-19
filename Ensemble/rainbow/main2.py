@@ -132,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='NoisyDQN', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
-    parser.add_argument('--game', type=str, default='hero', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='chopper_command', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(20e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -151,7 +151,10 @@ if __name__ == '__main__':
     parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
     parser.add_argument('--target-update', type=int, default=int(32000), metavar='τ', help='Number of steps after which to update target network')
     parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
-    parser.add_argument('--learning-rate', type=float, default=0.0005, metavar='η', help='Learning rate')
+    parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
+    parser.add_argument('--eps-start', type=float, default=1.0, help='Starting value of epsilon for exploration')
+    parser.add_argument('--eps-end', type=float, default=0.01, help='Final value of epsilon after decay')
+    parser.add_argument('--eps-decay', type=int, default=int(10e4), help='Number of steps over which epsilon is decayed')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')
@@ -233,6 +236,11 @@ if __name__ == '__main__':
             with bz2.open(memory_path, 'wb') as zipped_pickle_file:
                 pickle.dump(memory, zipped_pickle_file)
 
+    def e_scheduler(T):
+        if T <= 100000:
+            return args.eps_start - (T * (args.eps_start - args.eps_end) / 100000)
+        else:
+            return args.eps_end
     # Environment
     env = Env(args)
     env = Rewardvalue(env)
@@ -272,7 +280,7 @@ if __name__ == '__main__':
         if done:
             state, done = env.reset(), False
         next_state, _, done = env.step(np.random.randint(0, action_space))
-        val_mem.append(state, None, None, done)
+        val_mem.append(state, 0, 0, done)
         state = next_state
         T += 1
 
@@ -299,7 +307,10 @@ if __name__ == '__main__':
 
             if T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
                 dqn.reset_noise()  # Draw a new set of noisy weights
-            action = dqn.act(state)  # Choose an action greedily (with noisy weights)
+            if args.model_name == 'NoisyDQN':
+                action = dqn.act(state)
+            else:
+                action = dqn.act_e_greedy_lr(state, epsilon=1.0)  # Choose an action greedily (with noisy weights)
             next_state, reward, done = env.step(action)  # Step
 
             if args.reward_clip > 0:
@@ -315,6 +326,7 @@ if __name__ == '__main__':
             env.env.reward_mode = reward_mode_[T-1]
             action_p = env.eps
             scheduler = env.env.reward_mode
+            epsilon = e_scheduler(T)
 
             if done:
                 state, done = env.reset(), False
@@ -322,7 +334,10 @@ if __name__ == '__main__':
             if T % args.replay_frequency == 0 and args.model_name == 'NoisyDQN':
                 dqn.reset_noise()  # Draw a new set of noisy weights
 
-            action = dqn.act(state)  # Choose an action greedily (with noisy weights)
+            if args.model_name == 'NoisyDQN':
+                action = dqn.act(state)
+            else:
+                action = dqn.act_e_greedy_lr(state, epsilon)  # Choose an action greedily with schedular
             next_state, reward, done = env.step(action)  # Step
             # scheduler.update(T)
             if args.reward_clip > 0:

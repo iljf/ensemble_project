@@ -127,12 +127,12 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='block_rainbow_ca', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='block_rainbow', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
-    parser.add_argument('--model_name', type=str, default='DDQN', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
-    parser.add_argument('--game', type=str, default='chopper_command', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--model_name', type=str, default='NoisyDQN', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
+    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(20e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -187,8 +187,8 @@ if __name__ == '__main__':
                    name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
                    config=args.__dict__
                    )
-    elif args.id == 'block_rainbow_ca':
-        wandb.init(project="blt",
+    elif args.id == 'block_rainbow':
+        wandb.init(project="bt",
                name=args.model_name + "_r_ " + args.game + "_b_" + str(args.block_id) + "_Seed" + str(args.seed),
                config=args.__dict__
                )
@@ -236,11 +236,11 @@ if __name__ == '__main__':
             with bz2.open(memory_path, 'wb') as zipped_pickle_file:
                 pickle.dump(memory, zipped_pickle_file)
 
-    def e_scheduler(T):
-        if T <= 100000:
-            return args.eps_start - (T * (args.eps_start - args.eps_end) / 100000)
-        else:
-            return args.eps_end
+    # def e_scheduler(T):
+    #     if T <= 100000:
+    #         return args.eps_start - (T * (args.eps_start - args.eps_end) / 100000)
+    #     else:
+    #         return args.eps_end
     # Environment
     env = Env(args)
     env = Rewardvalue(env)
@@ -280,7 +280,7 @@ if __name__ == '__main__':
         if done:
             state, done = env.reset(), False
         next_state, _, done = env.step(np.random.randint(0, action_space))
-        val_mem.append(state, 0, 0, done)
+        val_mem.append(state, None, None, done)
         state = next_state
         T += 1
 
@@ -319,14 +319,16 @@ if __name__ == '__main__':
             mem.append(state, action, reward, done)  # Append transition to memory
             state = next_state
             T += 1
+
         log('Memory:' + ' T = ' + str(T) + ' / ' + str(args.learn_start))
+
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
             env.eps = action_probs_[T-1]
             env.env.reward_mode = reward_mode_[T-1]
             action_p = env.eps
             scheduler = env.env.reward_mode
-            epsilon = e_scheduler(T)
+            # epsilon = e_scheduler(T)
 
             if done:
                 state, done = env.reset(), False
@@ -337,7 +339,7 @@ if __name__ == '__main__':
             if args.model_name == 'NoisyDQN':
                 action = dqn.act(state)
             else:
-                action = dqn.act_e_greedy_lr(state, epsilon)  # Choose an action greedily with schedular
+                action = dqn.act_e_greedy_lr(state, epsilon=0.05)  # Choose an action greedily with schedular
             next_state, reward, done = env.step(action)  # Step
             # scheduler.update(T)
             if args.reward_clip > 0:

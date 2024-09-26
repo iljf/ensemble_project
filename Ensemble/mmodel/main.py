@@ -172,16 +172,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # wandb intialize
-    if args.id == 'diverse_sunrise':
-        wandb.init(project="ensemble_testing",
-                   name="MM_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-                   config=args.__dict__
-                   )
-    elif args.id == 'block_mm':
-        wandb.init(project="eclt",
-                   name="MM_" + args.game + "_b_" + str(args.block_id) + "_lr" + str(args.learning_rate) + "_Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-                   config=args.__dict__
-                   )
+    # if args.id == 'diverse_sunrise':
+    #     wandb.init(project="ensemble_testing",
+    #                name="MM_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+    #                config=args.__dict__
+    #                )
+    # elif args.id == 'block_mm':
+    #     wandb.init(project="eclt",
+    #                name="MM_" + args.game + "_b_" + str(args.block_id) + "_lr" + str(args.learning_rate) + "_Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+    #                config=args.__dict__
+    #                )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     models = ['DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
     for i in range(args.num_ensemble):
         model = models[i % len(models)]
-        dqn = Agent(args, env, model)
+        dqn = Agent(args, env, model, ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble))
         dqn_list.append(dqn)
 
     # If a model is provided, and evaluate is false, presumably we want to resume, so try to load memory
@@ -422,17 +422,17 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                                   'eval/action_prob': action_probs_[T-1],
-                                   'eval/reward': reward,
-                                   'eval/Average_reward': avg_reward,
-                                   'eval/timestep': T,
-                                   'Q-value/Q-value': avg_Q,
-                                   'Q-value/batch-loss': batch_loss,
-                                   'Q-value/batch-std-Q-mean': std_Q_mean,
-                                   'Q-value/batch-std-Q-min': std_Q_min,
-                                   'Q-value/batch-std-Q-max': std_Q_max,
-                                   },step=T)
+                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                        #            'eval/action_prob': action_probs_[T-1],
+                        #            'eval/reward': reward,
+                        #            'eval/Average_reward': avg_reward,
+                        #            'eval/timestep': T,
+                        #            'Q-value/Q-value': avg_Q,
+                        #            'Q-value/batch-loss': batch_loss,
+                        #            'Q-value/batch-std-Q-mean': std_Q_mean,
+                        #            'Q-value/batch-std-Q-min': std_Q_min,
+                        #            'Q-value/batch-std-Q-max': std_Q_max,
+                        #            },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

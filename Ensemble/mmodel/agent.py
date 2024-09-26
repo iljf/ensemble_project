@@ -6,11 +6,12 @@ import torch
 from torch import optim
 import wandb
 import torch.nn.functional as F
+from sunrise_memory import ReplayMemory
 
 from model import DQN, DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN
 
 class Agent():
-    def __init__(self, args, env, model):
+    def __init__(self, args, env, model, memory=None):
         self.action_space = env.action_space()
         self.atoms = args.atoms
         self.Vmin = args.V_min
@@ -20,6 +21,7 @@ class Agent():
         self.batch_size = args.batch_size
         self.n = args.multi_step
         self.discount = args.discount
+        self.memory = memory if memory else ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble)
 
         # self.online_net = DQN(args, self.action_space).to(device=args.device)
 
@@ -133,9 +135,7 @@ class Agent():
             # Calculate the target Q values : target_q = reward + (1 - done) * discount * max_next_q_values
             target_q_values = rewards + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-        td_error = target_q_values - current_q_values # L1 loss
-        loss = torch.abs(td_error) # torch.abs computes the absolute value of each element.
-
+        loss = F.mse_loss(current_q_values, target_q_values, reduction='none')
         # Optimize the model
         self.online_net.zero_grad()
         (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
@@ -156,9 +156,7 @@ class Agent():
             # Calculate the target Q values
             target_q_values = rewards + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-        td_error = target_q_values - current_q_values
-        loss = torch.abs(td_error)
-
+        loss = F.mse_loss(current_q_values, target_q_values, reduction='none')
         # Optimize the model
         self.online_net.zero_grad()
         (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
@@ -214,8 +212,7 @@ class Agent():
                 # Calculate the target Q values : target_q = reward + (1 - done) * discount * max_next_q_values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
-            loss = torch.stack(loss)
+            loss = F.mse_loss(current_q_values, target_q_values, reduction='none')
 
             # Optimize the model
             self.online_net.zero_grad()
@@ -240,8 +237,7 @@ class Agent():
                 # Calculate the target Q values
                 target_q_values = returns + (nonterminals.squeeze() * self.discount * max_next_q_values)
 
-            loss = [F.mse_loss(current_q_values[i], target_q_values[i]) for i in range(len(current_q_values))]
-            loss = torch.stack(loss)
+            loss = F.mse_loss(current_q_values, target_q_values, reduction='none')
 
             # Optimize the model
             self.online_net.zero_grad()

@@ -52,7 +52,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'i dont know'}
         elif env_name == 'krull':
             reward_mode_info = {0: 'default', 1: 'i dont know'}
-        elif env_name == 'hero':
+        elif env_name == 'assault':
             reward_mode_info = {0: 'default', 1: 'i dont know'}
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
@@ -80,6 +80,8 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         rand_cond_seed = np.append(0, rand_cond_seed)
         # repeat each of them 100k times
         reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
+        # overide the last block to be 1
+        reward_mode_schedule[-200000:] = 1
 
         # TODO check the code;
         # repeat by 100k times till 400k
@@ -132,7 +134,7 @@ if __name__ == '__main__':
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
-    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='crazy_climber', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(20e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -177,7 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
-    parser.add_argument('--block-id', type=int, default=0, help='testing schedule block')
+    parser.add_argument('--block-id', type=int, default=4, help='testing schedule block')
 
     # Setup
     args = parser.parse_args()

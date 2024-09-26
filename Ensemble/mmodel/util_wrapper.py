@@ -456,6 +456,28 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
+        if self.env.env_name == 'krull':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward >= 1 and reward <= 90:
+                        shaped_reward = reward // 2
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 500:
+                        shaped_reward = 1000
+                else:
+                    if reward >= 1 and reward <= 90:
+                        shaped_reward = reward // 2
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 500:
+                        shaped_reward = 1000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
 class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):
         super(Action_random, self).__init__(env)

@@ -95,9 +95,10 @@ class Env():
   def action_space(self):
     return len(self.actions)
 
-  def render(self):
-    cv2.imshow('screen', self.ale.getScreenRGB()[:, :, ::-1])
-    cv2.waitKey(1)
+  def render(self, mode='human'):
+    if mode == 'human':
+      cv2.imshow('screen', self.ale.getScreenRGB()[:, :, ::-1])
+      cv2.waitKey(1)
 
   def close(self):
     cv2.destroyAllWindows()

@@ -25,17 +25,23 @@ class Agent():
 
         #TODO: Q networks for each agents
         self.online_net = self.init_model(args, model, self.action_space).to(device=args.device)
-        if args.model:  # Load pretrained model if provided
-            if os.path.isfile(args.model):
-                state_dict = torch.load(args.model, map_location='cpu')  # Always load tensors onto CPU by default, will shift to GPU if necessary
-                if 'conv1.weight' in state_dict.keys():
-                    for old_key, new_key in (('conv1.weight', 'convs.0.weight'), ('conv1.bias', 'convs.0.bias'), ('conv2.weight', 'convs.2.weight'), ('conv2.bias', 'convs.2.bias'), ('conv3.weight', 'convs.4.weight'), ('conv3.bias', 'convs.4.bias')):
-                        state_dict[new_key] = state_dict[old_key]  # Re-map state dict for old pretrained models
-                        del state_dict[old_key]  # Delete old keys for strict load_state_dict
-                self.online_net.load_state_dict(state_dict)
-                print("Loading pretrained model: " + args.model)
-            else:  # Raise error if incorrect model path provided
-                raise FileNotFoundError(args.model)
+
+        if args.evaluate:
+                model_pth = args.id + '/' + args.game + '/' + args.model_name + '/'
+                dir = os.path.join('./results', model_pth)
+                file = f'{args.block_id}_model.pth'
+                path = os.path.join(dir, file)
+
+                if os.path.isfile(path):
+                    state_dict = torch.load(path, map_location='cpu')  # Always load tensors onto CPU by default, will shift to GPU if necessary
+                    if 'conv1.weight' in state_dict.keys():
+                        for old_key, new_key in (('conv1.weight', 'convs.0.weight'), ('conv1.bias', 'convs.0.bias'), ('conv2.weight', 'convs.2.weight'), ('conv2.bias', 'convs.2.bias'), ('conv3.weight', 'convs.4.weight'), ('conv3.bias', 'convs.4.bias')):
+                            state_dict[new_key] = state_dict[old_key]  # Re-map state dict for old pretrained models
+                            del state_dict[old_key]  # Delete old keys for strict load_state_dict
+                    self.online_net.load_state_dict(state_dict)
+                    print("Loading pretrained model: " + path)
+                else:  # Raise error if incorrect model path provided
+                    raise FileNotFoundError(path)
 
         self.online_net.train()
 
@@ -63,7 +69,7 @@ class Agent():
         elif model == 'DistributionalDQN':
             return DistributionalDQN(args, action_space)
         else:
-            raise ValueError("wtf")
+            raise ValueError("No model by the name")
     # Resets noisy weights in all linear layers (of online net only)
     def reset_noise(self):
         if self.model == 'NoisyDQN':
@@ -361,7 +367,7 @@ class Agent():
             if self.model == 'DistributionalDQN':
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
             else:
-                return self.online_net(state.unsqueeze(0)).argmax(1)[0].item()
+                return self.online_net(state.unsqueeze(0)).max(1)[0].item()
 
     def train(self):
         self.online_net.train()

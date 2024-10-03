@@ -94,6 +94,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             action_prob_seed = np.array(action_prob_set)
             # random shuffle of the predefined reward modes
             np.random.shuffle(action_prob_seed)
+            action_prob_seed = np.round(action_prob_seed, 1) # round to 1 decimal (e.g. 0.1, 0.5)
             action_prob_seed = np.append(0, action_prob_seed)
             # last 100k to be 0
             action_prob_seed = np.append(action_prob_seed, 0)
@@ -129,7 +130,7 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='block_rainbow', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='block_rb', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
@@ -179,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
-    parser.add_argument('--block-id', type=int, default=4, help='testing schedule block')
+    parser.add_argument('--block-id', type=int, default=0, help='testing schedule block')
 
     # Setup
     args = parser.parse_args()
@@ -189,8 +190,8 @@ if __name__ == '__main__':
                    name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
                    config=args.__dict__
                    )
-    elif args.id == 'block_rainbow':
-        wandb.init(project="bt",
+    elif args.id == 'block_rb':
+        wandb.init(project="block_rb",
                name=args.model_name + "_r_ " + args.game + "_b_" + str(args.block_id) + "_Seed" + str(args.seed),
                config=args.__dict__
                )
@@ -200,7 +201,7 @@ if __name__ == '__main__':
         print(' ' * 26 + k + ': ' + str(v))
 
     # exp name
-    exp_name = args.id + '_' + str(args.num_ensemble) + '/' + args.game
+    exp_name = args.id + '/' + args.game + '/' + args.model_name
 
     results_dir = os.path.join('./results', exp_name)
     if not os.path.exists(results_dir):
@@ -291,7 +292,7 @@ if __name__ == '__main__':
 
     if args.evaluate:
         dqn.eval()
-        avg_reward, avg_Q = test(args, 0, dqn, val_mem, metrics, results_dir, evaluate=True)  # Test
+        avg_reward, avg_Q = test(args, 0, dqn, val_mem, metrics, results_dir, evaluate=True, )  # Test
         print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
     else:
         # Training loop

@@ -455,38 +455,19 @@ class Rewardvalue(gym.Wrapper):
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward == 10:
-                        shaped_reward = 0
-                    if reward == 30:
-                        shaped_reward = 50
-                    if reward == 50:
-                        shaped_reward = 80
-
+                    if reward >= 1 and reward <= 90:
+                        shaped_reward = reward // 2
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 500:
+                        shaped_reward = 1000
                 else:
-                    shaped_reward = reward
-
-                return obs, shaped_reward, done
-            else: # reward 0
-                return obs, reward, done
-
-        if self.env.env_name == 'demon_attack_v5':
-            if self.reward_mode == 1:
-                shaped_reward = reward
-                if not done:
-                    if reward == 10:
-                        shaped_reward = 0
-                    if reward == 30:
-                        shaped_reward = 50
-                    if reward == 50:
-                        shaped_reward = 80
-
-                else:
-                    if reward == 10:
-                        shaped_reward = 0
-                    if reward == 30:
-                        shaped_reward = 50
-                    if reward == 50:
-                        shaped_reward = 80
+                    if reward >= 1 and reward <= 90:
+                        shaped_reward = reward // 2
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 500:
+                        shaped_reward = 1000
 
                 return obs, shaped_reward, done
             else: # 0

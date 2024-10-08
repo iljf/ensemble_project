@@ -48,6 +48,12 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'ignore jets'}
         elif env_name == 'bank_heist':
             reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'alien':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
+        elif env_name == 'krull':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
+        elif env_name == 'assault':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
@@ -73,7 +79,9 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         np.random.shuffle(rand_cond_seed)
         rand_cond_seed = np.append(0, rand_cond_seed)
         # repeat each of them 100k times
-        reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
+        reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
+        # overide the last block to be 1
+        reward_mode_schedule[-200000:] = 1
 
         # TODO check the code;
         # repeat by 100k times till 400k
@@ -86,12 +94,13 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             action_prob_seed = np.array(action_prob_set)
             # random shuffle of the predefined reward modes
             np.random.shuffle(action_prob_seed)
+            action_prob_seed = np.round(action_prob_seed, 1) # round to 1 decimal (e.g. 0.1, 0.5)
             action_prob_seed = np.append(0, action_prob_seed)
             # last 100k to be 0
             action_prob_seed = np.append(action_prob_seed, 0)
             # repeat each of them 100k times
 
-            action_prob_seed_schedule = np.repeat(action_prob_seed, 100000)
+            action_prob_seed_schedule = np.repeat(action_prob_seed, 200000)
 
             # TODO check the code;
             # repeat by 100k times till 400k
@@ -99,8 +108,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             # action_prob_seed_schedule = np.repeat(action_mode_seed, 100000)
 
         else: # if schedule_mode is 1,3,5,7 then continuous
-            action_prob_seed_schedule = np.random.rand(500000)/5 # TODO
-            # or sine wave - alike + np.random.randn(500000)/10
+            action_prob_seed_schedule = np.random.rand(1000000)/5
 
         if debug:
             rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
@@ -111,7 +119,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             rand_cond_seed = np.append(1, rand_cond_seed)
 
             # repeat each of them 100k times
-            reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
+            reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
 
 
         return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
@@ -122,33 +130,32 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='diverse_sunrise', help='Experiment ID')
-    parser.add_argument('--id2', type=str, default='-sigmoid', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='sunrise_mse_loss', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(50e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
-    parser.add_argument('--architecture', type=str, default='data-efficient', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
-    parser.add_argument('--hidden-size', type=int, default=256, metavar='SIZE', help='Network hidden size')
+    parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
+    parser.add_argument('--hidden-size', type=int, default=512, metavar='SIZE', help='Network hidden size')
     parser.add_argument('--noisy-std', type=float, default=0.1, metavar='σ', help='Initial standard deviation of noisy linear layers')
     parser.add_argument('--atoms', type=int, default=51, metavar='C', help='Discretised size of value distribution')
     parser.add_argument('--V-min', type=float, default=-10, metavar='V', help='Minimum of value distribution support')
     parser.add_argument('--V-max', type=float, default=10, metavar='V', help='Maximum of value distribution support')
     parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
-    parser.add_argument('--memory-capacity', type=int, default=int(500000), metavar='CAPACITY', help='Experience replay memory capacity')
-    parser.add_argument('--replay-frequency', type=int, default=1, metavar='k', help='Frequency of sampling from memory')
+    parser.add_argument('--memory-capacity', type=int, default=int(1e6), metavar='CAPACITY', help='Experience replay memory capacity')
+    parser.add_argument('--replay-frequency', type=int, default=4, metavar='k', help='Frequency of sampling from memory')
     parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='ω', help='Prioritised experience replay exponent (originally denoted α)')
     parser.add_argument('--priority-weight', type=float, default=0.4, metavar='β', help='Initial prioritised experience replay importance sampling weight')
-    parser.add_argument('--multi-step', type=int, default=20, metavar='n', help='Number of steps for multi-step return')
+    parser.add_argument('--multi-step', type=int, default=3, metavar='n', help='Number of steps for multi-step return')
     parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
-    parser.add_argument('--target-update', type=int, default=int(2000), metavar='τ', help='Number of steps after which to update target network')
+    parser.add_argument('--target-update', type=int, default=int(32000), metavar='τ', help='Number of steps after which to update target network')
     parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
-    parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='η', help='Learning rate')
+    parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-    parser.add_argument('--learn-start', type=int, default=int(1600), metavar='STEPS', help='Number of steps before starting training')
+    parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
     parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
@@ -166,16 +173,18 @@ if __name__ == '__main__':
     parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
-    parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')
-    parser.add_argument('--action-prob-min', type=float, default=0.7, help='min action probability')
+    parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
+    parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
+    parser.add_argument('--mse_loss', type=int, default=0, help='0 = True, 1 = False')
     # Setup
     args = parser.parse_args()
 
     # wandb intialize
-    # wandb.init(project="diverse_rainbow",
-    #            name="Sunrise_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-    #            config=args.__dict__
-    #            )
+    if args.id == 'sunrise_mse_loss':
+        wandb.init(project="e_mse",
+                   name="s_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+                   config=args.__dict__
+                   )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -284,6 +293,53 @@ if __name__ == '__main__':
         T, done = 0, True
         selected_en_index = np.random.randint(args.num_ensemble)
 
+        while T < args.learn_start:
+            env.eps = action_probs_[T]
+            env.env.reward_mode = reward_mode_[T]
+            action_p = env.eps
+            scheduler = env.env.reward_mode
+
+            if done:
+                state, done = env.reset(), False
+                selected_en_index = np.random.randint(args.num_ensemble)
+
+            if T % args.replay_frequency == 0:
+                dqn.reset_noise()
+
+            # UCB exploration
+            if args.ucb_infer > 0:
+                mean_Q, var_Q = None, None
+                L_target_Q = []
+                for en_index in range(args.num_ensemble):
+                    target_Q = dqn_list[en_index].get_online_q(state)
+                    L_target_Q.append(target_Q)
+                    if en_index == 0:
+                        mean_Q = target_Q / args.num_ensemble
+                    else:
+                        mean_Q += target_Q / args.num_ensemble
+                temp_count = 0
+                for target_Q in L_target_Q:
+                    if temp_count == 0:
+                        var_Q = (target_Q - mean_Q)**2
+                    else:
+                        var_Q += (target_Q - mean_Q)**2
+                    temp_count += 1
+                var_Q = var_Q / temp_count
+                std_Q = torch.sqrt(var_Q).detach()
+                ucb_score = mean_Q + args.ucb_infer * std_Q
+                action = ucb_score.argmax(1)[0].item()
+            else:
+                action = dqn_list[selected_en_index].act(state)  # Choose an action greedily (with noisy weights)
+            next_state, reward, done = env.step(action)  # Step
+            # scheduler.update(T)
+            if args.reward_clip > 0:
+                reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
+            mem.append(state, action, reward, done)  # Append transition to memory
+            state = next_state
+            T += 1
+
+        log('Memory:' + ' T = ' + str(T) + ' / ' + str(args.learn_start))
+
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
             env.eps = action_probs_[T-1]
@@ -329,98 +385,98 @@ if __name__ == '__main__':
             mem.append(state, action, reward, done)  # Append transition to memory
 
             # Train and test
-            if T >= args.learn_start:
-                mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
-                if T % args.replay_frequency == 0:
-                    total_q_loss = 0
+            # if T >= args.learn_start:
+            mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
+            if T % args.replay_frequency == 0:
+                total_q_loss = 0
 
-                    # Sample transitions
-                    idxs, states, actions, returns, next_states, nonterminals, weights, masks = mem.sample(args.batch_size)
-                    q_loss_tot = 0
+                # Sample transitions
+                idxs, states, actions, returns, next_states, nonterminals, weights, masks = mem.sample(args.batch_size)
+                q_loss_tot = 0
 
-                    weight_Q = None
-                    # Corrective feedback
-                    if args.temperature > 0:
-                        mean_Q, var_Q = None, None
-                        L_target_Q = []
-                        for en_index in range(args.num_ensemble):
-                            target_Q = dqn_list[en_index].get_target_q(next_states)
-                            L_target_Q.append(target_Q)
-                            if en_index == 0:
-                                mean_Q = target_Q / args.num_ensemble
-                            else:
-                                mean_Q += target_Q / args.num_ensemble
-                        temp_count = 0
-                        for target_Q in L_target_Q:
-                            if temp_count == 0:
-                                var_Q = (target_Q - mean_Q)**2
-                            else:
-                                var_Q += (target_Q - mean_Q)**2
-                            temp_count += 1
-                        var_Q = var_Q / temp_count
-                        std_Q = torch.sqrt(var_Q).detach()
-
-                        # std_Q max
-                        std_Q_max = max(std_Q)
-                        # std_Q min
-                        std_Q_min = min(std_Q)
-                        # std_Q mean
-                        std_Q_mean = sum(std_Q) / len(std_Q)
-
-                        weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
-
-
+                weight_Q = None
+                # Corrective feedback
+                if args.temperature > 0:
+                    mean_Q, var_Q = None, None
+                    L_target_Q = []
                     for en_index in range(args.num_ensemble):
-                        # Train with n-step distributional double-Q learning
-                        q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
-                                                                   next_states, nonterminals, weights,
-                                                                   masks[:, en_index], weight_Q)
+                        target_Q = dqn_list[en_index].get_target_q(next_states)
+                        L_target_Q.append(target_Q)
                         if en_index == 0:
-                            q_loss_tot = q_loss
+                            mean_Q = target_Q / args.num_ensemble
                         else:
-                            q_loss_tot += q_loss
-                    q_loss_tot = q_loss_tot / args.num_ensemble
+                            mean_Q += target_Q / args.num_ensemble
+                    temp_count = 0
+                    for target_Q in L_target_Q:
+                        if temp_count == 0:
+                            var_Q = (target_Q - mean_Q)**2
+                        else:
+                            var_Q += (target_Q - mean_Q)**2
+                        temp_count += 1
+                    var_Q = var_Q / temp_count
+                    std_Q = torch.sqrt(var_Q).detach()
 
-                    # Update priorities of sampled transitions
-                    mem.update_priorities(idxs, q_loss_tot)
+                    # std_Q max
+                    std_Q_max = max(std_Q)
+                    # std_Q min
+                    std_Q_min = min(std_Q)
+                    # std_Q mean
+                    std_Q_mean = sum(std_Q) / len(std_Q)
 
-                if T % args.evaluation_interval == 0:
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
-                    avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
-                                                      num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
-                    log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+                    weight_Q = torch.sigmoid(-std_Q*args.temperature) + 0.5
 
 
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].train()  # Set DQN (online network) back to training mode
+                for en_index in range(args.num_ensemble):
+                    # Train with n-step distributional double-Q learning
+                    q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
+                                                               next_states, nonterminals, weights,
+                                                               masks[:, en_index], weight_Q)
+                    if en_index == 0:
+                        q_loss_tot = q_loss
+                    else:
+                        q_loss_tot += q_loss
+                q_loss_tot = q_loss_tot / args.num_ensemble
 
-                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                        #            'eval/action_prob': action_probs_[T-1],
-                        #            'eval/reward': reward,
-                        #            'eval/Average_reward': avg_reward,
-                        #            'eval/timestep': T,
-                        #            'Q-value/Q-value': avg_Q,
-                        #            'Q-value/batch-loss': batch_loss,
-                        #            'Q-value/batch-std-Q-mean': std_Q_mean,
-                        #            'Q-value/batch-std-Q-min': std_Q_min,
-                        #            'Q-value/batch-std-Q-max': std_Q_max,
-                        #            },step=T)
+                # Update priorities of sampled transitions
+                mem.update_priorities(idxs, q_loss_tot)
 
-                    # If memory path provided, save it
-                    if args.memory is not None:
-                        save_memory(mem, args.memory, args.disable_bzip_memory)
+            if T % args.evaluation_interval == 0:
+                for en_index in range(args.num_ensemble):
+                    dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
+                avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
+                                                  num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
+                log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
 
-                # Update target network
-                if T % args.target_update == 0:
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].update_target_net()
 
-                # Checkpoint the network
-                if (args.checkpoint_interval != 0) and (T % args.checkpoint_interval == 0):
-                    for en_index in range(args.num_ensemble):
-                        dqn_list[en_index].save(results_dir, 'checkpoint.pth')
+                for en_index in range(args.num_ensemble):
+                    dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-            state = next_state
+                    wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                               'eval/action_prob': action_probs_[T-1],
+                               'eval/reward': reward,
+                               'eval/Average_reward': avg_reward,
+                               'eval/timestep': T,
+                               'Q-value/Q-value': avg_Q,
+                               'Q-value/batch-loss': batch_loss,
+                               'Q-value/batch-std-Q-mean': std_Q_mean,
+                               'Q-value/batch-std-Q-min': std_Q_min,
+                               'Q-value/batch-std-Q-max': std_Q_max,
+                               },step=T)
 
-        env.close()
+                # If memory path provided, save it
+                if args.memory is not None:
+                    save_memory(mem, args.memory, args.disable_bzip_memory)
+
+            # Update target network
+            if T % args.target_update == 0:
+                for en_index in range(args.num_ensemble):
+                    dqn_list[en_index].update_target_net()
+
+            # Checkpoint the network
+            if (args.checkpoint_interval != 0) and (T % args.checkpoint_interval == 0):
+                for en_index in range(args.num_ensemble):
+                    dqn_list[en_index].save(results_dir, 'checkpoint.pth')
+
+        state = next_state
+
+    env.close()

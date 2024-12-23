@@ -3,6 +3,8 @@
 - Growing When Required (GWR) 네트워크를 활용한 Map based memory 구현
 - 진행중인 개인연구(https://github.com/iljf/ensemble_project/tree/main/Ensemble/rainbow) 구현한 Map based memroy 적용하여 학습시 메모리 사이즈 비교 분석
 - Memory 구조비교
-  - 아이스크림
+  - Prioritized experience replay : 기존 연구에서 사용하던 메모리 방식으로 수집된 sample transition들을 segment tree 구조로 학습 sample의 중요도를 계산하여 높은 Td-error를 우선적으로 sampling
+  - GWR replay : 해당 프로젝트에서 적용한 방식으로 Graph network 구조를 가지고 agent의 state space 를 node 로 transition 을 edge로 표현하여 현재 input state와 유사항 node 들을 병합하여 메모리 사이즈 감소
 
+## A Memory-Efficient Solution to Catastrophic Forgetting in Reinforcement Learning
 Map-based Experience Replay: A Memory-Efficient Solution to Catastrophic Forgetting in Reinforcement Learning (https://arxiv.org/abs/2305.02054)

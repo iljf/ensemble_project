@@ -6,5 +6,12 @@
   - Prioritized experience replay : 기존 연구에서 사용하던 메모리 방식으로 수집된 sample transition들을 segment tree 구조로 학습 sample의 중요도를 계산하여 높은 Td-error를 우선적으로 sampling
   - GWR replay : 해당 프로젝트에서 적용한 방식으로 Graph network 구조를 가지고 agent의 state space 를 node 로 transition 을 edge로 표현하여 현재 input state와 유사항 node 들을 병합하여 메모리 사이즈 감소
 
-## A Memory-Efficient Solution to Catastrophic Forgetting in Reinforcement Learning
+## GWR memory
 Map-based Experience Replay: A Memory-Efficient Solution to Catastrophic Forgetting in Reinforcement Learning (https://arxiv.org/abs/2305.02054)
+
+## Requirements
+- [atari-py](https://github.com/openai/atari-py)
+- [PyTorch](http://pytorch.org/)
+
+
+Atari 2700 environment을 사용 [`atari-py` ROMs folder](https://github.com/openai/atari-py/tree/master/atari_py/atari_roms)

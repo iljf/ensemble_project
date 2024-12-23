@@ -1,5 +1,5 @@
 # Augmented memory sample efficient reinforcement learning
-해당 프로젝트에서는 sample efficient 한 알고리즘을 적용하여 agent 가 환경과 상호작용하는 것을 최소화한 상태에서도 효율적인 정책을 학습할 수 있도록 하는 것을 목표
+해당 프로젝트에서는 sample efficient 한 알고리즘을 적용하여 학습시 agent 가 환경과 상호작용하는 것을 최소화한 상태에서 효율적인 정책을 학습할 수 있도록 하는 것을 목표
 - Growing When Required (GWR) 네트워크를 활용한 Map based memory 구현
 - 진행중인 개인연구(https://github.com/iljf/ensemble_project/tree/main/Ensemble/rainbow) 구현한 Map based memroy 적용하여 학습시 메모리 사이즈 비교 분석
 - Memory 구조비교
@@ -19,3 +19,27 @@ Atari 2700 environment을 사용 [`atari-py` ROMs folder](https://github.com/ope
 
 ## Environmental settings
 Both Prioiritized expereince replay and GWR replay are tested with [DQN](https://arxiv.org/abs/1312.5602) using Atari 2700 [road_runner](https://ale.farama.org/environments/road_runner/) envrionment
+
+
+```
+python GWR_main.py --target-update 16000 \
+                   --T-max 100000 \
+                   --learn-start 10000 \
+                   --memory-capacity 100000 \
+                   --architecture canonical \
+                   --hidden-size 512 \
+                   --learning-rate 0.0001 \
+                   --evaluation-interval 1000 \
+                   --activation-threshold 0.9 \
+                   --habituation-threshold 0.85 \
+                   --block-id 0
+```
+
+memory is pre-stacked with 10000 samples before training starts both for PER and GWR
+
+## Experiments
+  
+PER 과 GWR 의 학습 시 메모리 사이즈 비교
+- activiation-threshold = [0.68, 0.7, 0.83 0.9]
+- habituation-threshold = [0.45, 0.65, 0.8, 0.85]
+

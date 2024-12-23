@@ -13,5 +13,9 @@ Map-based Experience Replay: A Memory-Efficient Solution to Catastrophic Forgett
 - [atari-py](https://github.com/openai/atari-py)
 - [PyTorch](http://pytorch.org/)
 
-
+run `conda env create -f environment.yml` and use `conda activate GWR`
+  
 Atari 2700 environment을 사용 [`atari-py` ROMs folder](https://github.com/openai/atari-py/tree/master/atari_py/atari_roms)
+
+## Environmental settings
+Both Prioiritized expereince replay and GWR replay are tested with [DQN](https://arxiv.org/abs/1312.5602) using Atari 2700 [road_runner](https://ale.farama.org/environments/road_runner/) envrionment

@@ -9,6 +9,9 @@
 ## GWR memory
 Map-based Experience Replay: A Memory-Efficient Solution to Catastrophic Forgetting in Reinforcement Learning (https://arxiv.org/abs/2305.02054)
 
+- GWR mermoy는 agent의 state space를 graph node로 mapping 하고 action 을 통해 edge로 연결하여 행동패턴 반영
+- BMU(Best matching unit)는 state space를 관리하며 현재 state가 메모리에서 기존 node와 얼마나 유사한지 결정
+  - euclidean distance를 계산하여 현재 state와 BMU의 거리가 특정 임계값 이하면 기존 노드와 병합하고 거리가 임계값보다 크다면 새로운 node 생성함으로 메모리를 관리
 ## Requirements
 - [atari-py](https://github.com/openai/atari-py)
 - [PyTorch](http://pytorch.org/)
@@ -52,6 +55,12 @@ PER 과 GWR 의 학습 시 메모리 사이즈 비교
 - Above statements are what 'I was expecting' but the results using DQN was quite different
 - The original paper tested AT and HT seperatly but the experiment I performed made synergy between AT,HT; making low HT to use more memory than high HT
 
-Overall, GWR were able to use less than 80% of the memory duing training compare to PER since GWR continously merge new nodes created by BMU with existing nodes using distance in map space; and PER 
-keep stacking transitions untill it reaches the capacity of the memory.
+Overall, GWR were able to use less than 80%(?) of the memory duing training compare to PER since GWR continously merge new nodes created by BMU with existing nodes using distance in map space; and PER keep stacking transitions untill it reaches the capacity of the memory.
+  
+![per-gwr](https://github.com/user-attachments/assets/f3192f8e-999c-495f-98e6-b9bfe89fd1a5)
 
+## Conclusion
+Come to think of it, the map-based memory (graph network) has a strong side in continous task since the action determines the edges and discrete tasks has only 18 actions max.
+(I think this is the reason why so many nodes are merged)
+- DQN, road runner 환경에서 실험을 했을때 total time step 을 100k, 기존 메모리 stacking 을 10k만 진행한 점에서 만족할만한 비교결과를 얻을 수는 없었다 (GWR memory로 실험을 하는 단계에서 graph network를 통해서 새로운 노드들을 생성하고 map sapce에 저장함으로 time consuming wise PER 보다 AT,HT 설정값에 따라 5-10배는 더 오래걸렸음)
+- 하지만 실험결과에서 일단은 performance 차이가 dramatic 하게 나지 않는 다는점, training 이전 memory stacking 을 80k 나 100k 를 진행하였으면 memory 증가 폭으로 예측하는데 PER 과 GWR memory 간의 메모리 사이즈 차이가 더 줄어들 것이라고 예상된다

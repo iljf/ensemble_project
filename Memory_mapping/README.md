@@ -43,5 +43,4 @@ PER 과 GWR 의 학습 시 메모리 사이즈 비교
 - activiation-threshold = [0.68, 0.7, 0.83 0.9]
 - habituation-threshold = [0.45, 0.65, 0.8, 0.85]
 
-![gwr_memory_size](img src="https://github.com/user-attachments/assets/e70f83e6-f7a4-49a2-8a0b-9ac272dafb2b" width="200" height="200"/)
-![gwr_reward](https://github.com/user-attachments/assets/5e6f728d-873b-482e-9a6d-9948796d9438)
+![gwr-mem-reward](https://github.com/user-attachments/assets/39c93416-ff05-4303-8b96-f246fb3cbfec)

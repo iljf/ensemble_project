@@ -55,7 +55,7 @@ PER 과 GWR 의 학습 시 메모리 사이즈 비교
 - Above statements are what 'I was expecting' but the results using DQN was quite different
 - The original paper tested AT and HT seperatly but the experiment I performed made synergy between AT,HT; making low HT to use more memory than high HT
 
-Overall, GWR were able to use less than 80%(?) of the memory duing training compare to PER since GWR continously merge new nodes created by BMU with existing nodes using distance in map space; and PER keep stacking transitions untill it reaches the capacity of the memory.
+Overall, GWR were able to use less than 20%(?) of the memory duing training compare to PER since GWR continously merge new nodes created by BMU with existing nodes using distance in map space; and PER keep stacking transitions untill it reaches the capacity of the memory.
   
 ![per-gwr](https://github.com/user-attachments/assets/f3192f8e-999c-495f-98e6-b9bfe89fd1a5)
 

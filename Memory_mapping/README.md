@@ -44,3 +44,14 @@ PER 과 GWR 의 학습 시 메모리 사이즈 비교
 - habituation-threshold = [0.45, 0.65, 0.8, 0.85]
 
 ![gwr-mem-reward](https://github.com/user-attachments/assets/39c93416-ff05-4303-8b96-f246fb3cbfec)
+  
+- AT(action threshold) 가 높을 수록 다양한 행동 패턴이 메모리에 계속 저장 될 가능성이 높음으로 메모리 구조의 action edge가 증가한다
+- As AT increases, more diverse data are stored in the data leading to improvements in performance
+- HT(habituation-threshold) 가 낮을 수록 기존 node 와의 유사도가 비슷하다고 간주되어 자주 node 끼리의 병합이 일어나 메모리 사이즈 감소
+- Low HT can cause important sample loss due to nodes being merged frequently
+- Above statements are what 'I was expecting' but the results using DQN was quite different
+- The original paper tested AT and HT seperatly but the experiment I performed made synergy between AT,HT; making low HT to use more memory than high HT
+
+Overall, GWR were able to use less than 80% of the memory duing training compare to PER since GWR continously merge new nodes created by BMU with existing nodes using distance in map space; and PER 
+keep stacking transitions untill it reaches the capacity of the memory.
+

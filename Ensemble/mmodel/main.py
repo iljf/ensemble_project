@@ -14,7 +14,7 @@ from tqdm import trange
 
 from agent import Agent
 from env import Env
-from sunrise_memory import ReplayMemory
+from sunrise_memory_ws import ReplayMemory
 from test import ensemble_test
 from util_wrapper import *
 
@@ -245,10 +245,11 @@ if __name__ == '__main__':
     #TODO: Diverse models
     # args.num_ensemble 수 만큼 agent를 생성하고 i % len(models) 만큼 할당
     # Each agent with diff models
-    models = ['DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
+    models = ['DQN', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
     for i in range(args.num_ensemble):
         model = models[i % len(models)]
-        dqn = Agent(args, env, model, ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble))
+        dqn = Agent(args, env, model) ## shared replay memory
+        # dqn = Agent(args, env, model, ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble)) ## for individual replay memory
         dqn_list.append(dqn)
 
     # If a model is provided, and evaluate is false, presumably we want to resume, so try to load memory
@@ -282,9 +283,6 @@ if __name__ == '__main__':
         val_mem.append(state, None, None, done)
         state = next_state
         T += 1
-
-
-
 
     if args.evaluate:
         for en_index in range(args.num_ensemble):
@@ -357,7 +355,8 @@ if __name__ == '__main__':
                 if T % args.replay_frequency == 0:
                     total_q_loss = 0
 
-                    # Sample transitions
+                    # Sample transitions / added probs, tree_idxs
+                    # probs, idxs, tee_idxs, states, actions, returns, next_states, nonterminals, weights, masks = mem.sample(args.batch_size)
                     idxs, states, actions, returns, next_states, nonterminals, weights, masks = mem.sample(args.batch_size)
                     q_loss_tot = 0
 
@@ -399,13 +398,17 @@ if __name__ == '__main__':
 
                     for en_index in range(args.num_ensemble):
                         # Train with n-step distributional double-Q learning
-                        q_loss, batch_loss = dqn_list[en_index].diversity_learn(idxs, states, actions, returns,
+                        q_loss, batch_loss, CE_loss = dqn_list[en_index].diversity_learn(idxs, states, actions, returns,
                                                                    next_states, nonterminals, weights,
                                                                    masks[:, en_index], weight_Q)
                         if en_index == 0:
                             q_loss_tot = q_loss
                         else:
                             q_loss_tot += q_loss
+
+                        r_loss = batch_loss.item() # TODO: reliability update
+                        mem.update_reliability(agent_idx=en_index, score= 1 / (r_loss + 1e-5))
+
                     q_loss_tot = q_loss_tot / args.num_ensemble
 
                     # Update priorities of sampled transitions
@@ -422,17 +425,18 @@ if __name__ == '__main__':
                     for en_index in range(args.num_ensemble):
                         dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                        # wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                        #            'eval/action_prob': action_probs_[T-1],
-                        #            'eval/reward': reward,
-                        #            'eval/Average_reward': avg_reward,
-                        #            'eval/timestep': T,
-                        #            'Q-value/Q-value': avg_Q,
-                        #            'Q-value/batch-loss': batch_loss,
-                        #            'Q-value/batch-std-Q-mean': std_Q_mean,
-                        #            'Q-value/batch-std-Q-min': std_Q_min,
-                        #            'Q-value/batch-std-Q-max': std_Q_max,
-                        #            },step=T)
+                        wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                                   'eval/action_prob': action_probs_[T-1],
+                                   'eval/reward': reward,
+                                   'eval/Average_reward': avg_reward,
+                                   'eval/timestep': T,
+                                   'Q-value/Q-value': avg_Q,
+                                   'Q-value/CE-loss': CE_loss,
+                                   'Q-value/batch-loss': batch_loss,
+                                   'Q-value/batch-std-Q-mean': std_Q_mean,
+                                   'Q-value/batch-std-Q-min': std_Q_min,
+                                   'Q-value/batch-std-Q-max': std_Q_max,
+                                   },step=T)
 
                     # If memory path provided, save it
                     if args.memory is not None:

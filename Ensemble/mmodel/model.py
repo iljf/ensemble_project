@@ -46,9 +46,9 @@ class NoisyLinear(nn.Module):
       return F.linear(input, self.weight_mu, self.bias_mu)
 
 # add separate models for training agents
-class DQNV(nn.Module):
+class DQN(nn.Module):
   def __init__(self, args, action_space):
-    super(DQNV, self).__init__()
+    super(DQN, self).__init__()
     self.action_space = action_space
     if args.architecture == 'canonical':
       self.conv = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
@@ -179,9 +179,9 @@ class DistributionalDQN(nn.Module):
       x = F.softmax(x, dim=2)
     return x
 
-class DQN(nn.Module):
+class Sunrise(nn.Module):
   def __init__(self, args, action_space):
-    super(DQN, self).__init__()
+    super(Sunrise, self).__init__()
     self.atoms = args.atoms
     self.action_space = action_space
 

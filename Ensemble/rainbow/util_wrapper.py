@@ -282,18 +282,26 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 50
-                    if reward == 200:
                         shaped_reward = 100
-                    if reward >= 201:
-                        shaped_reward = reward + 50
+                    if reward == 200:
+                        shaped_reward = 150
+                    if reward == 300:
+                        shaped_reward = 300
+                    if reward in (400, 500, 600, 700, 800):
+                        shaped_reward = 100
+                    if reward == 1000:
+                        shaped_reward = reward * 1.5
                 else:
                     if reward == 100:
-                        shaped_reward = 50
-                    if reward == 200:
                         shaped_reward = 100
-                    if reward >= 201:
-                        shaped_reward = reward + 50
+                    if reward == 200:
+                        shaped_reward = 150
+                    if reward == 300:
+                        shaped_reward = 300
+                    if reward in (400, 500, 600, 700, 800):
+                        shaped_reward = 100
+                    if reward == 1000:
+                        shaped_reward = reward * 1.5
                 return obs, shaped_reward, done
             else: # 0
                 return obs, reward, done
@@ -355,15 +363,15 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 100
+                        shaped_reward = 70
                     elif reward == -100:
-                        shaped_reward = 100
+                        shaped_reward = 50
 
                 else:
                     if reward == 100:
-                        shaped_reward = 100
+                        shaped_reward = 70
                     elif reward == -100:
-                        shaped_reward = 100
+                        shaped_reward = 50
 
                 return obs, shaped_reward, done
             else: # 0
@@ -390,16 +398,14 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 500
+                        shaped_reward = 150
                     if reward == 200:
-                        shaped_reward = 0
-
+                        shaped_reward = -10
                 else:
                     if reward == 100:
-                        shaped_reward = 500
+                        shaped_reward = 150
                     if reward == 200:
-                        shaped_reward = 0
-
+                        shaped_reward = -10
 
                 return obs, shaped_reward, done
             else: # 0
@@ -411,7 +417,7 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 10:
-                        shaped_reward = 5
+                        shaped_reward = 25
                     if reward == 20:
                         shaped_reward = 10
                     if reward == 30:
@@ -421,7 +427,7 @@ class Rewardvalue(gym.Wrapper):
 
                 else:
                     if reward == 10:
-                        shaped_reward = 5
+                        shaped_reward = 25
                     if reward == 20:
                         shaped_reward = 10
                     if reward == 30:

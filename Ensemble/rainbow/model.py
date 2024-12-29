@@ -179,9 +179,9 @@ class DistributionalDQN(nn.Module):
       x = F.softmax(x, dim=2)
     return x
 
-class DQN(nn.Module):
+class Rainbow(nn.Module):
   def __init__(self, args, action_space):
-    super(DQN, self).__init__()
+    super(Rainbow, self).__init__()
     self.atoms = args.atoms
     self.action_space = action_space
 

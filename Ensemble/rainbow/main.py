@@ -11,6 +11,7 @@ import atari_py
 import numpy as np
 import torch
 from tqdm import trange
+import pandas as pd
 
 from agent import Agent
 from env import Env
@@ -130,12 +131,12 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='block_rb', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='block_rb_r1', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
-    parser.add_argument('--game', type=str, default='kangaroo', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(20e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -259,8 +260,6 @@ if __name__ == '__main__':
         dqn = Agent(args, env, model)
 
 
-
-
     # If a model is provided, and evaluate is fale, presumably we want to resume, so try to load memory
     if args.model is not None and not args.evaluate:
         if not args.memory:
@@ -292,13 +291,48 @@ if __name__ == '__main__':
         state = next_state
         T += 1
 
-
-
+    df = pd.DataFrame(columns=['block_id', 'DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN'])
 
     if args.evaluate:
-        action_p = env.eps
-        scheduler = env.env.reward_mode
-        test(args, 0, None, val_mem, metrics, results_dir, scheduler=scheduler, action_p=action_p, evaluate=True)  # Test
+        dqn_model = ['DQNV', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
+
+        for block_id in range(5):
+            if block_id == 3:
+                continue
+            args.block_id = block_id
+
+            for model in dqn_model:
+                args.model_name = model
+                print(f"evaluating model: {args.model_name} on block_id: {args.block_id}")
+
+                global_seed_initailizer(args.seed)
+                reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game,
+                                                                         min_max_action_prob=[args.action_prob_min,
+                                                                                              args.action_prob_max])
+                block_ids = args.block_id
+                reward_mode_, action_probs_ = reward_mode_[(block_ids)*int(20e4):(block_ids+1)*int(20e4)], action_probs_[(block_ids)*int(20e4):(block_ids+1)*int(20e4)]
+
+                env.eps = action_probs_[0]
+                env.env.reward_mode = reward_mode_[0]
+                action_p = env.eps
+                scheduler = env.env.reward_mode
+
+                dqn = Agent(args, env, model)
+
+                dqn.eval()
+
+                T_rewards = []
+                avg_reward, avg_Q = test(args, 0, dqn, val_mem, metrics, results_dir, scheduler=scheduler, action_p=action_p, evaluate=True)  # Test
+
+                block_id_str = f'block_id_{args.block_id}'
+                if block_id_str not in df['block_id'].values:
+                    df.loc[len(df)] = [block_id_str, None, None, None, None, None]
+                df.loc[df['block_id'] == block_id_str, model] = avg_reward
+
+        eva = args.id + '/' + args.game + '/'
+        results_dir_ = os.path.join('./results', eva)
+        df.to_csv(os.path.join(results_dir_, f'{args.game}.csv'))
+
     else:
         # Training loop
         dqn.train()

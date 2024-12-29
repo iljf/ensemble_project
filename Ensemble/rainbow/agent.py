@@ -6,7 +6,7 @@ import torch
 from torch import optim
 import torch.nn.functional as F
 
-from model import DQN, DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN
+from model import Rainbow, DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN
 
 class Agent():
     def __init__(self, args, env, model):
@@ -68,18 +68,20 @@ class Agent():
             return DuelingDQN(args, action_space)
         elif model == 'DistributionalDQN':
             return DistributionalDQN(args, action_space)
+        elif model == 'Rainbow':
+            return Rainbow(args, action_space)
         else:
             raise ValueError("No model by the name")
     # Resets noisy weights in all linear layers (of online net only)
     def reset_noise(self):
-        if self.model == 'NoisyDQN':
+        if self.model in ('NoisyDQN', 'Rainbow'):
             self.online_net.reset_noise()
 
     # Acts based on single state (no batch)
     # code for rainbow
     def act(self, state):
         with torch.no_grad():
-            if self.model == 'DistributionalDQN':
+            if self.model in ('DistributionalDQN', 'Rainbow'):
                 return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
             else:
                 return self.online_net(state.unsqueeze(0)).argmax(1).item()
@@ -99,7 +101,7 @@ class Agent():
     # Compute targe Q-value
     def get_target_q(self, next_states):
         with torch.no_grad():
-            if self.model == 'DistributionalDQN':
+            if self.model in ('DistributionalDQN', 'Rainbow'):
                 pns = self.online_net(next_states)
                 dns = self.support.expand_as(pns) * pns
                 argmax_indices_ns = dns.sum(2).argmax(1)
@@ -114,7 +116,7 @@ class Agent():
     # Compute Q-value
     def get_online_q(self, states):
         with torch.no_grad():
-            if self.model == 'DistributionalDQN':
+            if self.model in ('DistributionalDQN', 'Rainbow'):
                 pns = self.online_net(states.unsqueeze(0))
                 dns = self.support.expand_as(pns) * pns
                 return dns.sum(2)
@@ -182,8 +184,29 @@ class Agent():
     def learn_by_name(self, mem, model_name):
         # Sample transitions
         idxs, states, actions, returns, next_states, nonterminals, weights = mem.sample(self.batch_size)
+        CE_loss = torch.tensor(0.0)
 
         if model_name == "DistributionalDQN":
+            # Calculate current state probabilities (online network noise already sampled)
+            ps = self.online_net(states)  # Probabilities p(s_t, ? ?online)
+            ps_a_ = ps[range(self.batch_size), actions]  # p(s_t, a_t; ?online)
+
+            q = torch.sum(self.support * ps_a_, dim=1)
+
+            with torch.no_grad():
+                pns_ = self.online_net(next_states)
+                dns_ = self.support.expand_as(pns_) * pns_
+                argmax_indices = dns_.sum(2).argmax(1)
+
+                pns_ = self.target_net(next_states)
+                pns_a_ = pns_[range(self.batch_size), argmax_indices]
+
+                Q_target = torch.sum(self.support * pns_a_, dim=1)
+                Q_t = returns + (nonterminals.squeeze() * (self.discount ** self.n) * Q_target)
+
+            mse_loss = F.mse_loss(q, Q_t, reduction='none')
+            batch_loss = (weights * mse_loss).mean()
+
             # Calculate current state probabilities (online network noise already sampled)
             log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
             log_ps_a = log_ps[range(self.batch_size), actions]  # log p(s_t, a_t; θonline)
@@ -216,7 +239,7 @@ class Agent():
             loss = -torch.sum(m * log_ps_a, 1)  # Cross-entropy loss (minimises DKL(m||p(s_t, a_t)))
             self.online_net.zero_grad()
             (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
-            batch_loss = (weights * loss).mean()
+            CE_loss = (weights * loss).mean()
             self.optimiser.step()
 
             mem.update_priorities(idxs, loss.detach().cpu().numpy())
@@ -269,11 +292,31 @@ class Agent():
 
             mem.update_priorities(idxs, loss.detach().cpu().numpy())
 
-        return batch_loss.detach().cpu().item()
+        return batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item()
 
-    def learn(self, mem):
+    def learn(self, mem, model_name):
         # Sample transitions
         idxs, states, actions, returns, next_states, nonterminals, weights = mem.sample(self.batch_size)
+        CE_loss = torch.tensor(0.0)
+
+        ps = self.online_net(states)  # Probabilities p(s_t, ? ?online)
+        ps_a_ = ps[range(self.batch_size), actions]  # p(s_t, a_t; ?online)
+
+        q = torch.sum(self.support * ps_a_, dim=1)
+
+        with torch.no_grad():
+            pns_ = self.online_net(next_states)
+            dns_ = self.support.expand_as(pns_) * pns_
+            argmax_indices = dns_.sum(2).argmax(1)
+
+            pns_ = self.target_net(next_states)
+            pns_a_ = pns_[range(self.batch_size), argmax_indices]
+
+            Q_target = torch.sum(self.support * pns_a_, dim=1)
+            Q_t = returns + (nonterminals.squeeze() * (self.discount ** self.n) * Q_target)
+
+        mse_loss = F.mse_loss(q, Q_t, reduction='none')
+        batch_loss = (weights * mse_loss).mean()
 
         # Calculate current state probabilities (online network noise already sampled)
         log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
@@ -308,9 +351,12 @@ class Agent():
         loss = -torch.sum(m * log_ps_a, 1)  # Cross-entropy loss (minimises DKL(m||p(s_t, a_t)))
         self.online_net.zero_grad()
         (weights * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
+        CE_loss = (weights * loss).mean()
         self.optimiser.step()
 
         mem.update_priorities(idxs, loss.detach().cpu().numpy())  # Update priorities of sampled transitions
+
+        return batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item()
         
     def ensemble_learn(self, idxs, states, actions, returns, next_states, nonterminals, weights, masks, weight_Q=None):
         # Calculate current state probabilities (online network noise already sampled)
@@ -364,7 +410,7 @@ class Agent():
     # Evaluates Q-value based on single state (no batch)
     def evaluate_q(self, state):
         with torch.no_grad():
-            if self.model == 'DistributionalDQN':
+            if self.model in ('DistributionalDQN', 'Rainbow'):
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
             else:
                 return self.online_net(state.unsqueeze(0)).max(1)[0].item()

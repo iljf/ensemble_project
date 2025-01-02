@@ -357,7 +357,7 @@ class Agent():
         mem.update_priorities(idxs, loss.detach().cpu().numpy())  # Update priorities of sampled transitions
 
         return batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item()
-        
+
     def ensemble_learn(self, idxs, states, actions, returns, next_states, nonterminals, weights, masks, weight_Q=None):
         # Calculate current state probabilities (online network noise already sampled)
         log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
@@ -413,7 +413,7 @@ class Agent():
             if self.model in ('DistributionalDQN', 'Rainbow'):
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
             else:
-                return self.online_net(state.unsqueeze(0)).max(1)[0].item()
+                return self.online_net(state.unsqueeze(0)).argmax(1)[0].item()
 
     def train(self):
         self.online_net.train()

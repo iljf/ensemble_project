@@ -276,32 +276,17 @@ class Rewardvalue(gym.Wrapper):
     def step(self, action):
         obs, reward, done = self.env.step(action)
 
+        # [dk edited]
+        # simply "live longer"
         # Try only to kill kayote
         if self.env.env_name == 'road_runner':
             if self.reward_mode == 1:
                 shaped_reward = reward
-                if not done:
-                    if reward == 100:
-                        shaped_reward = 100
-                    if reward == 200:
-                        shaped_reward = 150
-                    if reward == 300:
-                        shaped_reward = 300
-                    if reward in (400, 500, 600, 700, 800):
-                        shaped_reward = 100
-                    if reward == 1000:
-                        shaped_reward = reward * 1.5
+                if done:
+                    shaped_reward = -100
                 else:
-                    if reward == 100:
-                        shaped_reward = 100
-                    if reward == 200:
-                        shaped_reward = 150
-                    if reward == 300:
-                        shaped_reward = 300
-                    if reward in (400, 500, 600, 700, 800):
-                        shaped_reward = 100
-                    if reward == 1000:
-                        shaped_reward = reward * 1.5
+                    shaped_reward = 100
+
                 return obs, shaped_reward, done
             else: # 0
                 return obs, reward, done
@@ -357,24 +342,16 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
-        # hit by every obstacle
+        # [dk edited]
+        # get anything as reward
         if self.env.env_name == 'crazy_climber':
             if self.reward_mode == 1:
                 shaped_reward = reward
-                if not done:
-                    if reward == 100:
-                        shaped_reward = 70
-                    elif reward == -100:
-                        shaped_reward = 50
-
-                else:
-                    if reward == 100:
-                        shaped_reward = 70
-                    elif reward == -100:
-                        shaped_reward = 50
+                if reward > 0 and reward < 1000: # not too big to get bonus after finishing a building
+                    shaped_reward = 100
 
                 return obs, shaped_reward, done
-            else: # 0
+            else: # just as it is, maybe sparsely rewarding
                 return obs, reward, done
 
         # dodge everything, no shooting.
@@ -411,30 +388,16 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
+        # [dk edited]
+        # simply "live longer"
         # concentrate on car pursuits
         if self.env.env_name == 'bank_heist':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward == 10:
-                        shaped_reward = 25
-                    if reward == 20:
-                        shaped_reward = 10
-                    if reward == 30:
-                        shaped_reward = 40
-                    if reward == 50:
-                        shaped_reward = 50
-
+                    shaped_reward = 100
                 else:
-                    if reward == 10:
-                        shaped_reward = 25
-                    if reward == 20:
-                        shaped_reward = 10
-                    if reward == 30:
-                        shaped_reward = 40
-                    if reward == 50:
-                        shaped_reward = 50
-
+                    shaped_reward = -100
                 return obs, shaped_reward, done
             else: # 0
                 return obs, reward, done

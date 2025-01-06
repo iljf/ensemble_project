@@ -4,8 +4,8 @@ from collections import namedtuple
 import numpy as np
 import torch
 
-Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal', 'mask'))
-blank_trans = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0, False, torch.zeros(5, dtype=torch.float32))
+Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal', 'mask', 'reliability', 'agent_id'))
+blank_trans = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0, False, torch.zeros(5, dtype=torch.float32), torch.zeros(5, dtype=torch.float32), None)
 
 #mask = torch.bernoulli(torch.Tensor([ber_mean]*num_ensemble))
 # Segment tree data structure where parent node values are sum/max of children node values
@@ -68,20 +68,25 @@ class ReplayMemory():
         self.capacity = capacity
         self.history = args.history_length
         self.discount = args.discount
+        self.s = args.gamma
         self.n = args.multi_step
         self.priority_weight = args.priority_weight  # Initial importance sampling weight β, annealed to 1 over course of training
         self.priority_exponent = args.priority_exponent
         self.beta_mean = beta_mean
         self.num_ensemble = num_ensemble
+        self.pre_sample = 1000
         self.t = 0  # Internal episode timestep counter
         self.transitions = SegmentTree(capacity)  # Store transitions in a wrap-around cyclic buffer within a sum tree for querying priorities
-        self.reliability = np.ones(num_ensemble)/num_ensemble # TODO: initial reliability to uniform distribution
 
     # Adds state and action at time t, reward and terminal at time t + 1
-    def append(self, state, action, reward, terminal):
+    def append(self, state, action, reward, terminal, reliability, agent_id):
+        # if reliability is None:
+        #     reliability = 0
+        # if agent_id is None:
+        #     agent_id = -1
         state = state[-1].mul(255).to(dtype=torch.uint8, device=torch.device('cpu'))  # Only store last frame and discretise to save memory
         mask = torch.bernoulli(torch.Tensor([self.beta_mean]*self.num_ensemble))
-        self.transitions.append(Transition(self.t, state, action, reward, not terminal, mask), self.transitions.max)  # Store new transition with maximum priority
+        self.transitions.append(Transition(self.t, state, action, reward, not terminal, mask, reliability, agent_id), self.transitions.max)  # Store new transition with maximum priority
         self.t = 0 if terminal else self.t + 1  # Start new episodes with t = 0
 
     # Returns a transition with blank states where appropriate
@@ -123,49 +128,76 @@ class ReplayMemory():
         nonterminal = torch.tensor([transition[self.history + self.n - 1].nonterminal], dtype=torch.float32, device=self.device)
         
         mask = transition[self.history - 1].mask.to(dtype=torch.uint8, device=self.device)
+        reliability = transition[self.history -1].reliability
         
-        return prob, idx, tree_idx, state, action, R, next_state, nonterminal, mask
+        return prob, idx, tree_idx, state, action, R, next_state, nonterminal, mask, reliability
 
-    def sample(self, batch_size):
-        p_total = self.transitions.total()  # Retrieve sum of all priorities (used to create a normalised probability distribution)
-        segment = p_total / batch_size  # Batch size number of segments, based on sum over all probabilities
-        r_weights = self.reliability / self.reliability.sum() # TODO: reliability added in sampling probabilities
-        batch = []
+    def sample(self, batch_size, weight, temp, agent_id):
+        exp = [[] for _ in range(self.num_ensemble)]  # Experience storage for 5 agents
 
-        for i in range(batch_size): # TODO: reliability added to _get_sample_from_segment
-            valid = False
-            while not valid:
-                agent_idx = np.random.choice(self.num_ensemble, p=r_weights)
-                sample = np.random.uniform(i * segment,(i + 1) * segment)  # Uniformly sample an element from within a segment
-                prob, idx, tree_idx = self.transitions.find(sample)  # Retrieve sample from tree with un-normalised probability
-                # Resample if transition straddled current index or probablity 0
-                if (self.transitions.index - idx) % self.capacity > self.n and (idx - self.transitions.index) % self.capacity >= self.history and prob != 0:
-                    valid = True  # Note that conditions are valid but extra conservative around buffer index 0
+        while True:
+            p_total = self.transitions.total()
+            segment = p_total / self.pre_sample
+            batch = [self._get_sample_from_segment(segment, i) for i in range(self.pre_sample)]
 
-            if idx % self.num_ensemble == agent_idx: # TODO: agent selection
-                transition = self._get_transition(idx)
-                state = torch.stack([trans.state for trans in transition[:self.history]]).to(device=self.device).to(dtype=torch.float32).div_(255)
-                next_state = torch.stack([trans.state for trans in transition[self.n:self.n + self.history]]).to(device=self.device).to(dtype=torch.float32).div_(255)
-                action = torch.tensor([transition[self.history - 1].action], dtype=torch.int64, device=self.device)
-                R = torch.tensor([sum(self.discount ** n * transition[self.history + n - 1].reward for n in range(self.n))],dtype=torch.float32, device=self.device)
-                nonterminal = torch.tensor([transition[self.history + self.n - 1].nonterminal], dtype=torch.float32,device=self.device)
-                mask = transition[self.history - 1].mask.to(dtype=torch.uint8, device=self.device)
-                batch.append((prob, idx, tree_idx, state, action, R, next_state, nonterminal, mask))
+            probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, reliability = zip(*batch)
 
-        probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks = zip(*batch)
-        states, next_states, = torch.stack(states), torch.stack(next_states)
+
+            reliability = np.array([r.cpu().numpy() if isinstance(r, torch.Tensor) else r for r in reliability])  # transition - list
+            weighted_reliability = -weight * reliability # -w * Mse
+
+
+            s_probs = []
+            for r in weighted_reliability: # softmax with temperature
+                exp_r = np.exp(r/temp)
+                s_prob = exp_r / np.sum(exp_r)
+                s_probs.append(s_prob)
+            s_probs = np.array(s_probs)
+
+
+            agent_assignments = [np.random.choice(range(self.num_ensemble), p=s_probs[i]) for i in range(self.pre_sample)] # samples to each agent with s_probs
+            for i, agent_idx in enumerate(agent_assignments):
+                exp[agent_idx].append(batch[i])
+
+
+            satisfied = True
+            for agent_idx in range(self.num_ensemble): # ordering samples with prioirity
+                exp[agent_idx] = sorted(exp[agent_idx], key=lambda x: x[0], reverse=True)[:batch_size]
+                if len(exp[agent_idx]) < batch_size:
+                    satisfied = False
+
+            if satisfied:
+                break
+
+        # Prepare outputs for the specified agent_id
+        model_batch = exp[agent_id]
+        probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, reliability = zip(*model_batch)
+        states, next_states = torch.stack(states), torch.stack(next_states)
         actions, returns, nonterminals = torch.cat(actions), torch.cat(returns), torch.stack(nonterminals)
-        probs = np.array(probs, dtype=np.float32) / p_total  # Calculate normalised probabilities
+        probs = np.array(probs, dtype=np.float32) / p_total
+
         capacity = self.capacity if self.transitions.full else self.transitions.index
-        weights = (capacity * probs) ** -self.priority_weight  # Compute importance-sampling weights w
-        weights = torch.tensor(weights / weights.max(), dtype=torch.float32, device=self.device)  # Normalise by max importance-sampling weight from batch
+        weights = (capacity * probs) ** -self.priority_weight
+        weights = torch.tensor(weights / weights.max(), dtype=torch.float32, device=self.device)
+
         masks = torch.cat(masks, dim=0)
         masks = masks.reshape(-1, self.num_ensemble)
-        return tree_idxs, states, actions, returns, next_states, nonterminals, weights, masks
 
-    def update_reliability(self, agent_idx, score):
-        self.reliability[agent_idx] = score
-        self.reliability = self.reliability / self.reliability.sum()
+        return tree_idxs, states, actions, returns, next_states, nonterminals, weights, masks, reliability
+
+    def update_transition(self, idx, reliability=None, agent_id=None):
+        transition = self.transitions.get(idx)
+        if transition is None:
+            transition = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0, False, torch.zeros(5, dtype=torch.float32), torch.zeros(5, dtype=torch.float32), None)
+        current_reliability = transition.reliability.clone() if transition.reliability is not None else torch.zeros_like(reliability)
+        current_agent_id = transition.agent_id.clone() if transition.agent_id is not None else torch.zeros_like(agent_id)
+
+        update_reliability = current_reliability + reliability
+        update_agent_id = current_agent_id + agent_id
+
+        update_transition = transition._replace(reliability=update_reliability, agent_id=update_agent_id)
+        self.transitions.data[idx % self.capacity] = update_transition
+
 
     def update_priorities(self, idxs, priorities):
         priorities = np.power(priorities, self.priority_exponent)

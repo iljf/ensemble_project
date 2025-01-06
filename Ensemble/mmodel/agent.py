@@ -4,16 +4,17 @@ import os
 import numpy as np
 import torch
 from torch import optim
-import wandb
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
-from sunrise_memory import ReplayMemory
+
 
 from model import DQN, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN
 
 class Agent():
-    def __init__(self, args, env, model): # shared memory
+    def __init__(self, args, env, model, agent_id): # shared memory
     # def __init__(self, args, env, model, memory=None): ## indiv. memory
         self.action_space = env.action_space()
+        self.agent_id = agent_id
         self.atoms = args.atoms
         self.Vmin = args.V_min
         self.Vmax = args.V_max
@@ -22,6 +23,8 @@ class Agent():
         self.batch_size = args.batch_size
         self.n = args.multi_step
         self.discount = args.discount
+        self.loss_history = []
+
         # self.memory = memory if memory else ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble) # individual memory
 
         # self.online_net = DQN(args, self.action_space).to(device=args.device)
@@ -52,6 +55,7 @@ class Agent():
             param.requires_grad = False
 
         self.optimiser = optim.Adam(self.online_net.parameters(), lr=args.learning_rate, eps=args.adam_eps)
+        self.lr_schedular = CosineAnnealingWarmRestarts(self.optimiser, T_0=200000)
 
         #TODO: Modles for each agents
     def init_model(self, args, model, action_space):
@@ -66,7 +70,8 @@ class Agent():
         elif model == 'DistributionalDQN':
             return DistributionalDQN(args, action_space)
         else:
-            raise ValueError("wtf")
+            raise ValueError("No known network")
+
     # Resets noisy weights in all linear layers (of online net only)
     def reset_noise(self):
         if isinstance(self.online_net, (NoisyDQN)):
@@ -79,6 +84,7 @@ class Agent():
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
             else:
                 return self.online_net(state.unsqueeze(0)).argmax(1).item()
+
     # Get Q-function
     def ensemble_q(self, state):
         with torch.no_grad():
@@ -90,6 +96,12 @@ class Agent():
     # Acts with an ε-greedy policy (used for evaluation only)
     def act_e_greedy(self, state, epsilon=0.001):  # High ε can reduce evaluation scores drastically
         return np.random.randint(0, self.action_space) if np.random.random() < epsilon else self.act(state)
+
+    def log_loss(self, batch_loss):
+        self.loss_history.append(batch_loss)
+
+    def get_loss_history(self):
+        return self.loss_history
     
     # Compute targe Q-value
     def get_target_q(self, next_states):
@@ -144,6 +156,7 @@ class Agent():
 
             mse_loss = F.mse_loss(q, Q_t, reduction='none')
             batch_loss = (weights * masks * mse_loss).mean()
+            transition_loss = (weights * masks * mse_loss)
 
             # Calculate current state probabilities (online network noise already sampled)
             log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
@@ -182,6 +195,7 @@ class Agent():
                 (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 CE_loss = (weight_Q * weights * masks * loss).mean()
             self.optimiser.step()
+            self.lr_schedular.step()
 
 
         elif isinstance(self.online_net, (DQN)):
@@ -200,10 +214,13 @@ class Agent():
             if weight_Q is None:
                 (weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weights * masks * loss).mean()
+                transition_loss = (weights * masks * loss)
             else:
                 (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weight_Q * weights * masks * loss).mean()
+                transition_loss = (weight_Q * weights * masks * loss)
             self.optimiser.step()
+            self.lr_schedular.step()
 
 
         elif isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
@@ -225,12 +242,15 @@ class Agent():
             if weight_Q is None:
                 (weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weights * masks * loss).mean()
+                transition_loss = (weights * masks * loss)
             else:
                 (weight_Q * weights * masks * loss).mean().backward()  # Backpropagate importance-weighted minibatch loss
                 batch_loss = (weight_Q * weights * masks * loss).mean()
+                transition_loss = (weight_Q * weights * masks * loss)
             self.optimiser.step()
-
-        return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item()
+            self.lr_schedular.step()
+        self.log_loss(batch_loss.detach().cpu().item())
+        return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item(), transition_loss.detach().cpu(), self.agent_id
 
 
     def learn(self, mem):
@@ -326,7 +346,7 @@ class Agent():
     # Evaluates Q-value based on single state (no batch)
     def evaluate_q(self, state):
         with torch.no_grad():
-            if isinstance(self.online_net, (DistributionalDQN, DQN)):
+            if isinstance(self.online_net, (DistributionalDQN)):
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
             else:
                 return self.online_net(state.unsqueeze(0)).argmax(1)[0].item()

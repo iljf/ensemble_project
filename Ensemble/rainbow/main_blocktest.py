@@ -29,100 +29,94 @@ def global_seed_initailizer(seed):
     # random seed for torch.cuda
     torch.cuda.manual_seed(seed)
 
-def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_set = None, min_max_action_prob = [0.1, 0.9], debug = False):
-        if env_name == 'road_runner':
-            # there are two rewarding modes: 0: default, 1: kill koyote
-            reward_mode_info = {0: 'default', 1: 'kill_koyote'}
-        elif env_name == 'frostbite':
-            # there are two rewarding modes: 0: default, 1: collect_fish
-            reward_mode_info = {0: 'default', 1: 'jumb_forever'}
-        elif env_name == 'crazy_climber':
-            # there are two rewarding modes: 0: default, 1: get_hit
-            reward_mode_info = {0: 'default', 1: 'get_hit'}
-        elif env_name == 'jamesbond':
-            # there are two rewarding modes: 0: default, 1:
-            reward_mode_info = {0: 'default', 1: 'dodge_everything'}
-        elif env_name == 'kangaroo':
-            reward_mode_info = {0: 'default', 1: 'punch_monkeys'}
-        elif env_name == 'chopper_command':
-            reward_mode_info = {0: 'default', 1: 'ignore jets'}
-        elif env_name == 'bank_heist':
-            reward_mode_info = {0: 'default', 1: 'car persuit'}
-        elif env_name == 'alien':
-            reward_mode_info = {0: 'default', 1: 'i dont know'}
-        elif env_name == 'krull':
-            reward_mode_info = {0: 'default', 1: 'i dont know'}
-        elif env_name == 'assault':
-            reward_mode_info = {0: 'default', 1: 'i dont know'}
-        # if action_prob_set is None:
-        #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
-        # last iterations to be 0
-        if action_prob_set is None:
-            action_prob_set = np.random.rand(3) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
 
-        else:
-            if len(action_prob_set) != 4:
-                raise ValueError('action_prob_set should be of length 4')
+def predefined_scheduler(schedule_mode=1, env_name='road_runner', action_prob_set=None, min_max_action_prob=[0.1, 0.9],
+                         debug=False):
+    if env_name == 'road_runner':
+        # there are two rewarding modes: 0: default, 1: kill koyote
+        reward_mode_info = {0: 'default', 1: 'kill_koyote'}
+    elif env_name == 'frostbite':
+        # there are two rewarding modes: 0: default, 1: collect_fish
+        reward_mode_info = {0: 'default', 1: 'jumb_forever'}
+    elif env_name == 'crazy_climber':
+        # there are two rewarding modes: 0: default, 1: get_hit
+        reward_mode_info = {0: 'default', 1: 'get_hit'}
+    elif env_name == 'jamesbond':
+        # there are two rewarding modes: 0: default, 1:
+        reward_mode_info = {0: 'default', 1: 'dodge_everything'}
+    elif env_name == 'kangaroo':
+        reward_mode_info = {0: 'default', 1: 'punch_monkeys'}
+    elif env_name == 'chopper_command':
+        reward_mode_info = {0: 'default', 1: 'ignore jets'}
+    elif env_name == 'bank_heist':
+        reward_mode_info = {0: 'default', 1: 'car persuit'}
+    # if action_prob_set is None:
+    #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
+    # last iterations to be 0
+    if action_prob_set is None:
+        action_prob_set = np.random.rand(3) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
 
+    else:
+        if len(action_prob_set) != 4:
+            raise ValueError('action_prob_set should be of length 4')
 
-        """
-        reward mode sampling 할때 마지막 400k 에서 500k를 0으로 세팅할때
-        rand_cond_seed = np.append(rand_cond_seed, 0) 으로 뒤에 0을 하나더 넣어줌   
-        """
+    """
+    reward mode sampling 할때 마지막 400k 에서 500k를 0으로 세팅 할때
+    rand_cond_seed = np.append(rand_cond_seed, 0) 으로 뒤에 0을 하나더 넣어줌   
+    """
 
-        ## reward mode schedule
-        # mix the predefined reward modes
-        rand_cond_seed = [[j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
-        rand_cond_seed = np.array(rand_cond_seed).flatten()
+    ## reward mode schedule
+    # mix the predefined reward modes
+    rand_cond_seed = [[j for _ in range((5 - 1) // len(reward_mode_info.keys()))] for j in
+                      range(len(reward_mode_info.keys()))]
+    rand_cond_seed = np.array(rand_cond_seed).flatten()
 
+    # random shuffle of the predefined reward modes
+    np.random.shuffle(rand_cond_seed)
+    rand_cond_seed = np.append(0, rand_cond_seed)
+    # repeat each of them 100k times
+    reward_mode_schedule = np.repeat(rand_cond_seed, 400000)
+
+    # TODO check the code;
+    # repeat by 100k times till 400k
+    # num_repeats= 4
+    # reward_mode_seed = (rand_cond_seed * num_repeats)
+    # reward_mode_schedule = np.repeat(reward_mode_seed, 100000)
+
+    ## action probability schedule # continuous / discrete
+    if schedule_mode % 2 == 0:  # if schedule_mode is 0 ,2,4 ,6 then discrete
+        action_prob_seed = np.array(action_prob_set)
         # random shuffle of the predefined reward modes
-        np.random.shuffle(rand_cond_seed)
-        rand_cond_seed = np.append(0, rand_cond_seed)
+        np.random.shuffle(action_prob_seed)
+        action_prob_seed = np.append(0, action_prob_seed)
+        # last 100k to be 0
+        action_prob_seed = np.append(action_prob_seed, 0)
         # repeat each of them 100k times
-        reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
-        # overide the last block to be 1
-        reward_mode_schedule[-200000:] = 1
+
+        action_prob_seed_schedule = np.repeat(action_prob_seed, 400000)
 
         # TODO check the code;
         # repeat by 100k times till 400k
-        # num_repeats= 4
-        # reward_mode_seed = (rand_cond_seed * num_repeats)
-        # reward_mode_schedule = np.repeat(reward_mode_seed, 100000)
+        # action_mode_seed = (action_prob_seed * num_repeats)
+        # action_prob_seed_schedule = np.repeat(action_mode_seed, 100000)
 
-        ## action probability schedule # continuous / discrete
-        if schedule_mode % 2 == 0: # if schedule_mode is 0 ,2,4 ,6 then discrete
-            action_prob_seed = np.array(action_prob_set)
-            # random shuffle of the predefined reward modes
-            np.random.shuffle(action_prob_seed)
-            action_prob_seed = np.round(action_prob_seed, 1) # round to 1 decimal (e.g. 0.1, 0.5)
-            action_prob_seed = np.append(0, action_prob_seed)
-            # last 100k to be 0
-            action_prob_seed = np.append(action_prob_seed, 0)
-            # repeat each of them 100k times
+    else:  # if schedule_mode is 1,3,5,7 then continuous
+        action_prob_seed_schedule = np.random.rand(400000) / 5  # TODO
+        # or sine wave - alike + np.random.randn(500000)/10
 
-            action_prob_seed_schedule = np.repeat(action_prob_seed, 200000)
+    if debug:
+        rand_cond_seed = [[j for _ in range((5 - 1) // len(reward_mode_info.keys()))] for j in
+                          range(len(reward_mode_info.keys()))]
+        rand_cond_seed = np.array(rand_cond_seed).flatten()
 
-            # TODO check the code;
-            # repeat by 100k times till 400k
-            # action_mode_seed = (action_prob_seed * num_repeats)
-            # action_prob_seed_schedule = np.repeat(action_mode_seed, 100000)
+        # # random shuffle of the predefined reward modes
+        np.random.shuffle(rand_cond_seed)
+        rand_cond_seed = np.append(1, rand_cond_seed)
 
-        else: # if schedule_mode is 1,3,5,7 then continuous
-            action_prob_seed_schedule = np.random.rand(200000)/5
+        # repeat each of them 100k times
+        reward_mode_schedule = np.repeat(rand_cond_seed, 100000)
 
-        if debug:
-            rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
-            rand_cond_seed = np.array(rand_cond_seed).flatten()
-
-            # # random shuffle of the predefined reward modes
-            np.random.shuffle(rand_cond_seed)
-            rand_cond_seed = np.append(1, rand_cond_seed)
-
-            # repeat each of them 100k times
-            reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
-
-
-        return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
+    return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
 
 
 if __name__ == '__main__':
@@ -134,9 +128,9 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
-    parser.add_argument('--model_name', type=str, default='DDQV', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
+    parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
     parser.add_argument('--game', type=str, default='crazy_climber', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(2e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--T-max', type=int, default=int(2e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -180,7 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
-    parser.add_argument('--block-id', type=int, default=0, help='testing schedule block')
+    parser.add_argument('--block-id', type=int, default=7, help='testing schedule block')
 
     # Setup
     args = parser.parse_args()
@@ -197,6 +191,10 @@ if __name__ == '__main__':
                )
 
     elif args.id == 'mse_loss_200k':
+        # wandb.init(project="block_rb_dktest",
+        #            name=args.model_name + "_r_ " + args.game + "_Seed" + str(args.seed),
+        #            config=args.__dict__
+        #            )
         wandb.init(project="block_rb_dktest",
                    name=args.model_name + "_r_ " + args.game + "_Seed" + str(args.seed),
                    config=args.__dict__

@@ -11,10 +11,9 @@ import torch.nn.functional as F
 from model import DQN, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN
 
 class Agent():
-    def __init__(self, args, env, model, agent_id): # shared memory
+    def __init__(self, args, env, model): # shared memory
     # def __init__(self, args, env, model, memory=None): ## indiv. memory
         self.action_space = env.action_space()
-        self.agent_id = agent_id
         self.atoms = args.atoms
         self.Vmin = args.V_min
         self.Vmax = args.V_max
@@ -23,6 +22,7 @@ class Agent():
         self.batch_size = args.batch_size
         self.n = args.multi_step
         self.discount = args.discount
+        self.num_ensemble = args.num_ensemble
         self.loss_history = []
 
         # self.memory = memory if memory else ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble) # individual memory
@@ -84,6 +84,49 @@ class Agent():
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
             else:
                 return self.online_net(state.unsqueeze(0)).argmax(1).item()
+    def act_v2(self, state):
+        with torch.no_grad():
+            if isinstance(self.online_net, (DistributionalDQN)):
+                online_Q=(self.online_net(state.unsqueeze(0)) * self.support).sum(2)
+                return online_Q, online_Q.argmax(1).item()
+            else:
+                online_Q = self.online_net(state.unsqueeze(0))
+                return online_Q, online_Q.argmax(1).item()
+
+    def act_(self, state, next_state, action, reward):
+        with torch.no_grad():
+            if isinstance(self.online_net, (DistributionalDQN)):
+                ps = self.online_net(state)
+                ps_a_ = ps[0, action, :]
+
+                online_Q = torch.sum(self.support * ps_a_)
+
+                pns = self.online_net(next_state)
+                dns = self.support.expand_as(pns) * pns
+                argmax_index = dns.sum(2).argmax(1)
+
+                pns = self.target_net(next_state)
+                pns_a = pns.gather(1, argmax_index.unsqueeze(1).unsqueeze(2).expand(-1, 1, pns.size(2))).squeeze(1)
+
+                Q = torch.sum(self.support * pns_a)
+                target_Q = reward + (self.discount * Q)
+
+            elif isinstance(self.online_net, (DQN)):
+                online_Q = self.online_net(state)[:, action]
+
+                next_state_value = self.target_net(next_state).max(1)[0]
+                target_Q = reward + (self.discount * next_state_value)
+
+            elif isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
+                if isinstance(self.online_net, (NoisyDQN)):
+                    self.target_net.reset_noise()
+                online_Q = self.online_net(state)[:, action]
+
+                next_action = self.online_net(next_state).argmax(1)
+                next_state_value = self.target_net(next_state).gather(1, next_action.unsqueeze(-1)).squeeze(-1)
+                target_Q = reward + (self.discount * next_state_value)
+
+            return online_Q, target_Q, action
 
     # Get Q-function
     def ensemble_q(self, state):
@@ -92,16 +135,10 @@ class Agent():
                 return (self.online_net(state.unsqueeze(0)) * self.support).sum(2)
             else:
                 return self.online_net(state.unsqueeze(0))
-        
+
     # Acts with an ε-greedy policy (used for evaluation only)
     def act_e_greedy(self, state, epsilon=0.001):  # High ε can reduce evaluation scores drastically
         return np.random.randint(0, self.action_space) if np.random.random() < epsilon else self.act(state)
-
-    def log_loss(self, batch_loss):
-        self.loss_history.append(batch_loss)
-
-    def get_loss_history(self):
-        return self.loss_history
     
     # Compute targe Q-value
     def get_target_q(self, next_states):
@@ -114,17 +151,38 @@ class Agent():
                 pns_a = pns[range(self.batch_size), argmax_indices_ns]
                 pns_a = pns_a * self.support.expand_as(pns_a)
                 return pns_a.sum(1)
+            if isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
+                if isinstance(self.online_net, (NoisyDQN)):
+                    self.target_net.reset_noise()
+                next_actions = self.online_net(next_states).argmax(1)
+                q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
+                return q_values.argmax(1)
             else:
                 q_values = self.target_net(next_states)
                 return q_values.argmax(1)
+
+    def get_target_q_mse(self, next_state):
+        if isinstance(self.online_net, (DistributionalDQN)):
+            pns = self.online_net(next_state)
+            dns = self.support.expand_as(pns) * pns
+            argmax_index = dns.sum(2).argmax(1)
+            pns = self.target_net(next_state)
+            pns_a = pns.gather(1, argmax_index.unsqueeze(1).unsqueeze(2).expand(-1, 1, pns.size(2))).squeeze(1)
+            q_values = torch.sum(self.support * pns_a)
+            return q_values
+        if isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
+            next_action = self.online_net(next_state).argmax(1)
+            q_values = self.target_net(next_state).gather(1, next_action.unsqueeze(-1)).squeeze(-1)
+            return q_values
+        else:
+            q_values = self.target_net(next_state)
+            return q_values
+
 
     
     # Compute Q-value
     def get_online_q(self, states):
         with torch.no_grad():
-            # Debug agent class
-            # print(f"Type of online_net: {type(self.online_net)}")
-
             if isinstance(self.online_net, (DistributionalDQN)):
                 pns = self.online_net(states.unsqueeze(0))
                 dns = self.support.expand_as(pns) * pns
@@ -249,8 +307,8 @@ class Agent():
                 transition_loss = (weight_Q * weights * masks * loss)
             self.optimiser.step()
             self.lr_schedular.step()
-        self.log_loss(batch_loss.detach().cpu().item())
-        return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item(), transition_loss.detach().cpu(), self.agent_id
+
+        return loss.detach().cpu().numpy(), batch_loss.detach().cpu().item(), CE_loss.detach().cpu().item(), transition_loss.detach().cpu()
 
 
     def learn(self, mem):

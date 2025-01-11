@@ -129,7 +129,7 @@ class ReplayMemory():
         return prob, idx, tree_idx, state, action, R, next_state, nonterminal, mask, reliability
 
     def sample(self, batch_size, weight, temp):
-        exp = [[] for _ in range(self.num_ensemble)]  # Experience storage for 5 agents
+        exp = [[] for _ in range(self.num_ensemble)]
         agent_exp = []
         while True:
             p_total = self.transitions.total()
@@ -139,16 +139,18 @@ class ReplayMemory():
             probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, reliability = zip(*batch)
 
             reliability = torch.stack([r if isinstance(r, torch.Tensor) else torch.tensor(r) for r in reliability])
-            weighted_reliability = weight * reliability[:, -1] # distributional dqn -w * Mse
+            weighted_reliability = reliability.clone()
+            weighted_reliability[:, -1] *= weight # distributional dqn -w * Mse
+            weighted_reliability = reliability * torch.cat([torch.ones_like(reliability[:, :-1]), weight * torch.ones_like(reliability[:, -1:])],dim=1)
 
             s_probs = torch.softmax(-weighted_reliability / temp, dim=1)
-            agent_assignments = [torch.multinomial(s_probs[i], 1).item() for i in range(self.pre_sample)] # samples to each agent with s_probs
+            agent_assignments = [torch.multinomial(s_probs[i], 1).item() for i in range(self.pre_sample)]
 
             for i, en_index in enumerate(agent_assignments):
                 exp[en_index].append(batch[i])
 
             satisfied = True
-            for en_index in range(self.num_ensemble): # ordering samples with priority
+            for en_index in range(self.num_ensemble): # ordering samples with priority up to 32
                 exp[en_index] = sorted(exp[en_index], key=lambda x: x[0], reverse=True)[:batch_size]
                 if len(exp[en_index]) < batch_size:
                     satisfied = False

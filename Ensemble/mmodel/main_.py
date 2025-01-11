@@ -365,9 +365,8 @@ if __name__ == '__main__':
 
                 softmax_reliability = F.softmax(-mse_tensor / args.mse_temperature, dim=0)
                 momentum_reliability = (1-args.gamma) * reliability + args.gamma * softmax_reliability
-
-
                 momentum_reliability = torch.clamp(momentum_reliability, min=0.2, max=0.5)
+
                 reliability = momentum_reliability / momentum_reliability.sum()
 
                 state = next_state

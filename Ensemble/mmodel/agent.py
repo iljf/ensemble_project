@@ -173,10 +173,10 @@ class Agent():
         if isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
             next_action = self.online_net(next_state).argmax(1)
             q_values = self.target_net(next_state).gather(1, next_action.unsqueeze(-1)).squeeze(-1)
-            return q_values
+            return q_values.max()
         else:
             q_values = self.target_net(next_state)
-            return q_values
+            return q_values.max()
 
 
     
@@ -191,7 +191,7 @@ class Agent():
                 q_values = self.online_net(states.unsqueeze(0))
                 return q_values
 
-    def diversity_learn(self, idxs, states, actions, returns, next_states, nonterminals, weights, masks, weight_Q=None):
+    def diversity_learn(self, idxs, states, actions, returns, next_states, nonterminals, masks, weights, weight_Q=None):
         CE_loss = torch.tensor(0.0)
 
         if isinstance(self.online_net, (DistributionalDQN)):

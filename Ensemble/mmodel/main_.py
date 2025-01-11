@@ -165,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
     parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
     parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
-    parser.add_argument('--mse_temperature', type=float, default=2, help='temperature for mse_loss')
+    parser.add_argument('--mse_temperature', type=float, default=0.4, help='temperature for mse_loss')
     parser.add_argument('--ucb-infer', type=float, default=0, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
@@ -303,8 +303,8 @@ if __name__ == '__main__':
         selected_en_index = np.random.randint(args.num_ensemble)
 
         # action = None
-        reliability = np.ones(args.num_ensemble) / args.num_ensemble
 
+        reliability = torch.ones(args.num_ensemble, device=args.device) / args.num_ensemble
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
             env.eps = action_probs_[T-1]
@@ -320,11 +320,9 @@ if __name__ == '__main__':
                 dqn.reset_noise()
 
 
-
             if args.ucb_infer == 0:
                 # if action is None:
                 #     action = dqn_list[selected_en_index].act_e_greedy(state, epsilon=1.0)
-                reliability = np.ones(args.num_ensemble) / args.num_ensemble
                 online_Qlist = []
                 target_Qlist = []
                 action_Qlist = []
@@ -362,14 +360,15 @@ if __name__ == '__main__':
                 mse_list[-1] = args.r_weights * mse_list[-1] # distributional dqn
                 mse_tensor = torch.stack(mse_list)
 
-                reliability_loss = torch.exp( -mse_tensor / args.mse_temperature)
-                updated_reliability = F.softmax(reliability_loss, dim=0)
-                reliability = torch.tensor(reliability, device=mse_tensor.device, dtype=torch.float)
-                reliability = (1-args.gamma) * reliability + args.gamma * updated_reliability
 
-                reliability = torch.clamp(reliability, min=0.0005, max=0.03)
+                reliability_loss = torch.exp( - mse_tensor / args.mse_temperature)
+                softmax_reliability = F.softmax(reliability_loss, dim=0)
+                reliability = (1-args.gamma) * reliability + args.gamma * softmax_reliability
 
-                state = next_state # ??
+
+                Energy = torch.clamp(mse_tensor, min=0.00005, max=0.03)
+
+                state = next_state
 
             # UCB exploration
             if args.ucb_infer > 0:
@@ -401,7 +400,8 @@ if __name__ == '__main__':
             # scheduler.update(T)
             if args.reward_clip > 0:
                 reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
-            mem.append(state, action, reward, done, reliability)  # Append transition to memory
+            mem.append(state, action, reward, done, Energy)  # Append transition to memory
+
 
             # Train and test
             if T >= args.learn_start:
@@ -410,20 +410,25 @@ if __name__ == '__main__':
                     total_q_loss = 0
 
                     q_loss_tot = 0
-                    for en_index in range(args.num_ensemble):
-                        idxs, states, actions, returns, next_states, nonterminals, weights, masks, reliability = mem.sample(args.batch_size, args.r_weights, args.mse_temperature)
+                    idx_tot = []
+
+                    exps = mem.sample(args.batch_size, args.r_weights, args.mse_temperature)
+                    for en_index, exp in enumerate(exps):
+                        probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, weights = exp
+
+                        idx_tot.append(tree_idxs)
 
                         q_loss, batch_loss, CE_loss, transition_loss = dqn_list[en_index].diversity_learn(idxs, states, actions, returns,
-                                                                   next_states, nonterminals, weights,
-                                                                   masks[:, en_index], None)
+                                                                   next_states, nonterminals, masks[:, en_index],
+                                                                   weights, None)
 
                         for i, idx in enumerate(idxs):
-                            current_reliability = mem.get_transition_reliability(idx)
+                            current_mse = mem.get_transition_Energy(idx)
 
-                            updated_reliability = current_reliability.clone()
-                            updated_reliability[en_index] = transition_loss[i]
+                            updated_mse = current_mse.clone()
+                            updated_mse[en_index] = transition_loss[i]
 
-                            mem.update_transition(idx, updated_reliability)
+                            mem.update_transition(idx, updated_mse)
 
                         if en_index == 0:
                             q_loss_tot = q_loss
@@ -431,10 +436,11 @@ if __name__ == '__main__':
                             q_loss_tot += q_loss
 
                     q_loss_tot = q_loss_tot / args.num_ensemble
-
+                    idx_tot = np.array(idx_tot).flatten()
+                    idx_tot = np.unique(idx_tot)
 
                     # Update priorities of sampled transitions
-                    mem.update_priorities(idxs, q_loss_tot)
+                    mem.update_priorities(idx_tot, q_loss_tot)
 
                 if T % args.evaluation_interval == 0:
                     for en_index in range(args.num_ensemble):

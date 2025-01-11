@@ -4,7 +4,7 @@ from collections import namedtuple
 import numpy as np
 import torch
 
-Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal', 'mask', 'reliability'))
+Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal', 'mask', 'Energy'))
 blank_trans = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0, False, torch.zeros(5, dtype=torch.float32), torch.zeros(5, dtype=torch.float32))
 
 #mask = torch.bernoulli(torch.Tensor([ber_mean]*num_ensemble))
@@ -79,14 +79,10 @@ class ReplayMemory():
         self.transitions = SegmentTree(capacity)  # Store transitions in a wrap-around cyclic buffer within a sum tree for querying priorities
 
     # Adds state and action at time t, reward and terminal at time t + 1
-    def append(self, state, action, reward, terminal, reliability):
-        # if reliability is None:
-        #     reliability = 0
-        # if agent_id is None:
-        #     agent_id = -1
+    def append(self, state, action, reward, terminal, Energy):
         state = state[-1].mul(255).to(dtype=torch.uint8, device=torch.device('cpu'))  # Only store last frame and discretise to save memory
         mask = torch.bernoulli(torch.Tensor([self.beta_mean]*self.num_ensemble))
-        self.transitions.append(Transition(self.t, state, action, reward, not terminal, mask, reliability), self.transitions.max)  # Store new transition with maximum priority
+        self.transitions.append(Transition(self.t, state, action, reward, not terminal, mask, Energy), self.transitions.max)  # Store new transition with maximum priority
         self.t = 0 if terminal else self.t + 1  # Start new episodes with t = 0
 
     # Returns a transition with blank states where appropriate
@@ -128,13 +124,13 @@ class ReplayMemory():
         nonterminal = torch.tensor([transition[self.history + self.n - 1].nonterminal], dtype=torch.float32, device=self.device)
         
         mask = transition[self.history - 1].mask.to(dtype=torch.uint8, device=self.device)
-        reliability = transition[self.history -1].reliability
+        reliability = transition[self.history -1].Energy
         
         return prob, idx, tree_idx, state, action, R, next_state, nonterminal, mask, reliability
 
     def sample(self, batch_size, weight, temp):
         exp = [[] for _ in range(self.num_ensemble)]  # Experience storage for 5 agents
-
+        agent_exp = []
         while True:
             p_total = self.transitions.total()
             segment = p_total / self.pre_sample
@@ -143,48 +139,46 @@ class ReplayMemory():
             probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, reliability = zip(*batch)
 
             reliability = torch.stack([r if isinstance(r, torch.Tensor) else torch.tensor(r) for r in reliability])
-            weighted_reliability = - weight * reliability # -w * Mse
+            weighted_reliability = weight * reliability[:, -1] # distributional dqn -w * Mse
 
-            s_probs = torch.softmax(weighted_reliability / temp, dim=1)
+            s_probs = torch.softmax(-weighted_reliability / temp, dim=1)
             agent_assignments = [torch.multinomial(s_probs[i], 1).item() for i in range(self.pre_sample)] # samples to each agent with s_probs
 
-            for i, agent_idx in enumerate(agent_assignments):
-                exp[agent_idx].append(batch[i])
+            for i, en_index in enumerate(agent_assignments):
+                exp[en_index].append(batch[i])
 
             satisfied = True
-            for agent_idx in range(self.num_ensemble): # ordering samples with priority
-                exp[agent_idx] = sorted(exp[agent_idx], key=lambda x: x[0], reverse=True)[:batch_size]
-                if len(exp[agent_idx]) < batch_size:
+            for en_index in range(self.num_ensemble): # ordering samples with priority
+                exp[en_index] = sorted(exp[en_index], key=lambda x: x[0], reverse=True)[:batch_size]
+                if len(exp[en_index]) < batch_size:
                     satisfied = False
 
             if satisfied:
                 break
 
         # Prepare outputs for the specified agent_id
-        model_batch = exp[agent_idx]
-        probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, reliability = zip(*model_batch)
-        states, next_states = torch.stack(states), torch.stack(next_states)
-        actions, returns, nonterminals = torch.cat(actions), torch.cat(returns), torch.stack(nonterminals)
-        probs = np.array(probs, dtype=np.float32) / p_total
+        for en_index in range(self.num_ensemble):
+            model_batch = exp[en_index]
+            probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, _ = zip(*model_batch)
+            states, next_states = torch.stack(states), torch.stack(next_states)
+            actions, returns, nonterminals = torch.cat(actions), torch.cat(returns), torch.stack(nonterminals)
+            probs = np.array(probs, dtype=np.float32) / p_total
+            capacity = self.capacity if self.transitions.full else self.transitions.index
+            weights = (capacity * probs) ** -self.priority_weight
+            weights = torch.tensor(weights / weights.max(), dtype=torch.float32, device=self.device)
 
-        capacity = self.capacity if self.transitions.full else self.transitions.index
-        weights = (capacity * probs) ** -self.priority_weight
-        weights = torch.tensor(weights / weights.max(), dtype=torch.float32, device=self.device)
+            masks = torch.cat(masks, dim=0)
+            masks = masks.reshape(-1, self.num_ensemble)
 
-        masks = torch.cat(masks, dim=0)
-        masks = masks.reshape(-1, self.num_ensemble)
+            agent_exp.append((probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, weights))
+        return agent_exp
 
-        return tree_idxs, states, actions, returns, next_states, nonterminals, weights, masks, reliability
+    def get_transition_Energy(self, idx):
+        transition = self.transitions.get(idx)
+        return transition.Energy
 
-    def get_transition_reliability(self, idx):
-        # transition = self.transitions.get(idx)
-        transition_sequence = self._get_transition(idx)
-        current_transition = transition_sequence[self.history - 1]
-        return current_transition.reliability
-        # return transition.reliability
-
-    def update_transition(self, idx, updated_reliability):
-        self.transitions.data[idx % self.capacity] = self.transitions.data[idx % self.capacity]._replace(reliability=updated_reliability)
+    def update_transition(self, idx, updated_Energy):
+        self.transitions.data[idx % self.capacity] = self.transitions.data[idx % self.capacity]._replace(Energy=updated_Energy)
 
 
     def update_priorities(self, idxs, priorities):

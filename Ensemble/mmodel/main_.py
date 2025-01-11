@@ -123,7 +123,7 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='block_mm', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='DQNE', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
@@ -144,7 +144,6 @@ if __name__ == '__main__':
     parser.add_argument('--multi-step', type=int, default=3, metavar='n', help='Number of steps for multi-step return')
     parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
     parser.add_argument('--gamma', type=float, default=0.6, metavar='-', help='Probability to sustain previous reliability score')
-    parser.add_argument('--r_weights', type=float, default=0.8, metavar='-', help='reliability weights')
     parser.add_argument('--target-update', type=int, default=int(32000), metavar='τ', help='Number of steps after which to update target network')
     parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
     parser.add_argument('--learning-rate', type=float, default=0.001, metavar='η', help='Learning rate')
@@ -164,8 +163,10 @@ if __name__ == '__main__':
     # ensemble
     parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
     parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
+    parser.add_argument('--mse_weights', type=float, default=0.8, metavar='-', help='reliability weights')
     parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
-    parser.add_argument('--mse_temperature', type=float, default=0.4, help='temperature for mse_loss')
+    parser.add_argument('--mse_temperature', type=float, default=0.3, help='temperature for mse_loss')
+    parser.add_argument('--energy_temperature', type=float, default=0.8, help='temperature for Energy')
     parser.add_argument('--ucb-infer', type=float, default=0, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
@@ -357,16 +358,17 @@ if __name__ == '__main__':
                     mse_loss = F.mse_loss(online_Q, target_Q)
                     mse_list.append(mse_loss)
 
-                mse_list[-1] = args.r_weights * mse_list[-1] # distributional dqn
+                mse_list[-1] = args.mse_weights * mse_list[-1] # distributional dqn
                 mse_tensor = torch.stack(mse_list)
 
+                Energy = mse_tensor
 
-                reliability_loss = torch.exp( - mse_tensor / args.mse_temperature)
-                softmax_reliability = F.softmax(reliability_loss, dim=0)
-                reliability = (1-args.gamma) * reliability + args.gamma * softmax_reliability
+                softmax_reliability = F.softmax(-mse_tensor / args.mse_temperature, dim=0)
+                momentum_reliability = (1-args.gamma) * reliability + args.gamma * softmax_reliability
 
 
-                Energy = torch.clamp(mse_tensor, min=0.00005, max=0.03)
+                momentum_reliability = torch.clamp(momentum_reliability, min=0.2, max=0.5)
+                reliability = momentum_reliability / momentum_reliability.sum()
 
                 state = next_state
 
@@ -392,9 +394,8 @@ if __name__ == '__main__':
                 std_Q = torch.sqrt(var_Q).detach()
                 ucb_score = mean_Q + args.ucb_infer * std_Q
                 action = ucb_score.argmax(1)[0].item()
-            else:
+            if args.ucb_infer == -1:
                 action = dqn_list[selected_en_index].act(state)  # Choose an action greedily (with noisy weights)
-
 
             next_state, reward, done = env.step(action)  # Step
             # scheduler.update(T)
@@ -412,7 +413,7 @@ if __name__ == '__main__':
                     q_loss_tot = 0
                     idx_tot = []
 
-                    exps = mem.sample(args.batch_size, args.r_weights, args.mse_temperature)
+                    exps = mem.sample(args.batch_size, args.energy_temperature)
                     for en_index, exp in enumerate(exps):
                         probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, weights = exp
 

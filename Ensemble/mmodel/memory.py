@@ -128,7 +128,7 @@ class ReplayMemory():
         
         return prob, idx, tree_idx, state, action, R, next_state, nonterminal, mask, reliability
 
-    def sample(self, batch_size, weight, temp):
+    def sample(self, batch_size, temperature):
         exp = [[] for _ in range(self.num_ensemble)]
         agent_exp = []
         while True:
@@ -139,11 +139,8 @@ class ReplayMemory():
             probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, reliability = zip(*batch)
 
             reliability = torch.stack([r if isinstance(r, torch.Tensor) else torch.tensor(r) for r in reliability])
-            weighted_reliability = reliability.clone()
-            weighted_reliability[:, -1] *= weight # distributional dqn -w * Mse
-            weighted_reliability = reliability * torch.cat([torch.ones_like(reliability[:, :-1]), weight * torch.ones_like(reliability[:, -1:])],dim=1)
 
-            s_probs = torch.softmax(-weighted_reliability / temp, dim=1)
+            s_probs = torch.softmax(-reliability / temperature, dim=1)
             agent_assignments = [torch.multinomial(s_probs[i], 1).item() for i in range(self.pre_sample)]
 
             for i, en_index in enumerate(agent_assignments):
@@ -179,8 +176,8 @@ class ReplayMemory():
         transition = self.transitions.get(idx)
         return transition.Energy
 
-    def update_transition(self, idx, updated_Energy):
-        self.transitions.data[idx % self.capacity] = self.transitions.data[idx % self.capacity]._replace(Energy=updated_Energy)
+    def update_transition(self, idx, updated_mse):
+        self.transitions.data[idx % self.capacity] = self.transitions.data[idx % self.capacity]._replace(Energy=updated_mse)
 
 
     def update_priorities(self, idxs, priorities):

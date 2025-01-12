@@ -93,40 +93,40 @@ class Agent():
                 online_Q = self.online_net(state.unsqueeze(0))
                 return online_Q, online_Q.argmax(1).item()
 
-    def act_(self, state, next_state, action, reward):
-        with torch.no_grad():
-            if isinstance(self.online_net, (DistributionalDQN)):
-                ps = self.online_net(state)
-                ps_a_ = ps[0, action, :]
-
-                online_Q = torch.sum(self.support * ps_a_)
-
-                pns = self.online_net(next_state)
-                dns = self.support.expand_as(pns) * pns
-                argmax_index = dns.sum(2).argmax(1)
-
-                pns = self.target_net(next_state)
-                pns_a = pns.gather(1, argmax_index.unsqueeze(1).unsqueeze(2).expand(-1, 1, pns.size(2))).squeeze(1)
-
-                Q = torch.sum(self.support * pns_a)
-                target_Q = reward + (self.discount * Q)
-
-            elif isinstance(self.online_net, (DQN)):
-                online_Q = self.online_net(state)[:, action]
-
-                next_state_value = self.target_net(next_state).max(1)[0]
-                target_Q = reward + (self.discount * next_state_value)
-
-            elif isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
-                if isinstance(self.online_net, (NoisyDQN)):
-                    self.target_net.reset_noise()
-                online_Q = self.online_net(state)[:, action]
-
-                next_action = self.online_net(next_state).argmax(1)
-                next_state_value = self.target_net(next_state).gather(1, next_action.unsqueeze(-1)).squeeze(-1)
-                target_Q = reward + (self.discount * next_state_value)
-
-            return online_Q, target_Q, action
+    # def act_(self, state, next_state, action, reward):
+    #     with torch.no_grad():
+    #         if isinstance(self.online_net, (DistributionalDQN)):
+    #             ps = self.online_net(state)
+    #             ps_a_ = ps[0, action, :]
+    #
+    #             online_Q = torch.sum(self.support * ps_a_)
+    #
+    #             pns = self.online_net(next_state)
+    #             dns = self.support.expand_as(pns) * pns
+    #             argmax_index = dns.sum(2).argmax(1)
+    #
+    #             pns = self.target_net(next_state)
+    #             pns_a = pns.gather(1, argmax_index.unsqueeze(1).unsqueeze(2).expand(-1, 1, pns.size(2))).squeeze(1)
+    #
+    #             Q = torch.sum(self.support * pns_a)
+    #             target_Q = reward + (self.discount * Q)
+    #
+    #         elif isinstance(self.online_net, (DQN)):
+    #             online_Q = self.online_net(state)[:, action]
+    #
+    #             next_state_value = self.target_net(next_state).max(1)[0]
+    #             target_Q = reward + (self.discount * next_state_value)
+    #
+    #         elif isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
+    #             if isinstance(self.online_net, (NoisyDQN)):
+    #                 self.target_net.reset_noise()
+    #             online_Q = self.online_net(state)[:, action]
+    #
+    #             next_action = self.online_net(next_state).argmax(1)
+    #             next_state_value = self.target_net(next_state).gather(1, next_action.unsqueeze(-1)).squeeze(-1)
+    #             target_Q = reward + (self.discount * next_state_value)
+    #
+    #         return online_Q, target_Q, action
 
     # Get Q-function
     def ensemble_q(self, state):
@@ -156,10 +156,10 @@ class Agent():
                     self.target_net.reset_noise()
                 next_actions = self.online_net(next_states).argmax(1)
                 q_values = self.target_net(next_states).gather(1, next_actions.unsqueeze(-1)).squeeze(-1)
-                return q_values.argmax(1)
+                return q_values
             else:
                 q_values = self.target_net(next_states)
-                return q_values.argmax(1)
+                return q_values.max(1).values
 
     def get_target_q_mse(self, next_state):
         if isinstance(self.online_net, (DistributionalDQN)):
@@ -173,7 +173,7 @@ class Agent():
         if isinstance(self.online_net, (DDQN, DuelingDQN, NoisyDQN)):
             next_action = self.online_net(next_state).argmax(1)
             q_values = self.target_net(next_state).gather(1, next_action.unsqueeze(-1)).squeeze(-1)
-            return q_values.max()
+            return q_values
         else:
             q_values = self.target_net(next_state)
             return q_values.max()
@@ -407,7 +407,7 @@ class Agent():
             if isinstance(self.online_net, (DistributionalDQN)):
                return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).max(1)[0].item()
             else:
-                return self.online_net(state.unsqueeze(0)).argmax(1)[0].item()
+                return self.online_net(state.unsqueeze(0)).max(1)[0].item()
 
     def train(self):
         self.online_net.train()

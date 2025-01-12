@@ -166,7 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta-mean', type=float, default=1, help='mean of bernoulli')
     parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
     parser.add_argument('--r_temperature', type=float, default=10, help='temperature for CF')
-    parser.add_argument('--ucb-infer', type=float, default=0, help='coeff for UCB infer')
+    parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=10, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.9, help='max action probability')

@@ -284,48 +284,42 @@ class Rewardvalue(gym.Wrapper):
                     if reward == 100:
                         shaped_reward = 100
                     if reward == 200:
-                        shaped_reward = 500
+                        shaped_reward = 150
                     if reward == 300:
-                        shaped_reward = 400
-                    if reward == 400:
-                        shaped_reward = 600
+                        shaped_reward = 300
+                    if reward in (400, 500, 600, 700, 800):
+                        shaped_reward = 100
                     if reward == 1000:
-                        shaped_reward = 2000
+                        shaped_reward = reward * 1.5
                 else:
                     if reward == 100:
                         shaped_reward = 100
                     if reward == 200:
-                        shaped_reward = 500
+                        shaped_reward = 150
                     if reward == 300:
-                        shaped_reward = 400
-                    if reward == 400:
-                        shaped_reward = 600
+                        shaped_reward = 300
+                    if reward in (400, 500, 600, 700, 800):
+                        shaped_reward = 100
                     if reward == 1000:
-                        shaped_reward = 2000
-
+                        shaped_reward = reward * 1.5
                 return obs, shaped_reward, done
             else: # 0
                 return obs, reward, done
 
         # jump forever
-        if self.env.env_name == 'forstbite':
+        if self.env.env_name == 'frostbite':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward == 10:
-                        shaped_reward = 300
-                    if reward == 200:
-                        shaped_reward = 0
-                    if reward == 160:
-                        shaped_reward = 0
-
+                    if reward <= 100:
+                        shaped_reward = reward * 1.2
+                    elif reward >= 160:
+                        shaped_reward = -10
                 else:
-                    if reward == 10:
-                        shaped_reward = 300
-                    if reward == 200:
-                        shaped_reward = 0
-                    if reward == 160:
-                        shaped_reward = 0
+                    if reward <= 100:
+                        shaped_reward = reward * 1.2
+                    elif reward >= 160:
+                        shaped_reward = -10
 
                 return obs, shaped_reward, done
             else: # 0
@@ -337,25 +331,25 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 0
-                    if reward == 200:
-                        shaped_reward = 2000
+                        shaped_reward = 10
+                    if reward >= 200:
+                        shaped_reward = reward + 50
                     if reward == 400:
-                        shaped_reward = 0
+                        shaped_reward = 10
                     if reward == 800:
-                        shaped_reward = 0
+                        shaped_reward = 10
                     if reward == 0:
                         shaped_reward = 0
 
                 else:
                     if reward == 100:
-                        shaped_reward = 0
-                    if reward == 200:
-                        shaped_reward = 2000
+                        shaped_reward = 10
+                    if reward >= 200:
+                        shaped_reward = reward + 50
                     if reward == 400:
-                        shaped_reward = 0
+                        shaped_reward = 10
                     if reward == 800:
-                        shaped_reward = 0
+                        shaped_reward = 10
                     if reward == 0:
                         shaped_reward = 0
 
@@ -369,27 +363,15 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 100
-                    elif reward == 200:
-                        shaped_reward = 200
-                    elif reward == 300:
-                        shaped_reward = 300
-                    elif reward == 400:
-                        shaped_reward = 400
+                        shaped_reward = 70
                     elif reward == -100:
-                        shaped_reward = 1000
+                        shaped_reward = 50
 
                 else:
                     if reward == 100:
-                        shaped_reward = 100
-                    elif reward == 200:
-                        shaped_reward = 200
-                    elif reward == 300:
-                        shaped_reward = 300
-                    elif reward == 400:
-                        shaped_reward = 400
+                        shaped_reward = 70
                     elif reward == -100:
-                        shaped_reward = 1000
+                        shaped_reward = 50
 
                 return obs, shaped_reward, done
             else: # 0
@@ -400,15 +382,11 @@ class Rewardvalue(gym.Wrapper):
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward in (50, 100, 200, 500):
-                        shaped_reward = 0
-                    if reward == 5000:
-                        shaped_reward = 5000
+                    if reward == 50:
+                        shaped_reward = 30
                 else:
-                    if reward in (50, 100, 200, 500):
-                        shaped_reward = 0
-                    if reward == 5000:
-                        shaped_reward = 5000
+                    if reward == 50:
+                        shaped_reward = 30
 
                 return obs, shaped_reward, done
             else: # 0
@@ -420,14 +398,14 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 500
+                        shaped_reward = 150
                     if reward == 200:
-                        shaped_reward = 0
+                        shaped_reward = -10
                 else:
                     if reward == 100:
-                        shaped_reward = 500
+                        shaped_reward = 150
                     if reward == 200:
-                        shaped_reward = 0
+                        shaped_reward = -10
 
                 return obs, shaped_reward, done
             else: # 0
@@ -439,18 +417,41 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 10:
-                        shaped_reward = 0
+                        shaped_reward = 25
+                    if reward == 20:
+                        shaped_reward = 10
                     if reward == 30:
-                        shaped_reward = 50
+                        shaped_reward = 40
                     if reward == 50:
-                        shaped_reward = 80
+                        shaped_reward = 50
+
                 else:
                     if reward == 10:
-                        shaped_reward = 0
+                        shaped_reward = 25
+                    if reward == 20:
+                        shaped_reward = 10
                     if reward == 30:
-                        shaped_reward = 50
+                        shaped_reward = 40
                     if reward == 50:
-                        shaped_reward = 80
+                        shaped_reward = 50
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'assault':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 30
+                    if reward == 21:
+                        shaped_reward = 15
+                else:
+                    if reward == 10:
+                        shaped_reward = 30
+                    if reward == 21:
+                        shaped_reward = 15
 
                 return obs, shaped_reward, done
             else: # 0
@@ -482,39 +483,79 @@ class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):
         super(Action_random, self).__init__(env)
         self.eps = eps
-        # self.movement_actions = [3, 4, 5, 6, 7, 8, 9]
-        # self.fire_actions = [10, 11, 12, 13, 14, 15, 16, 17]
-        self.directions = [-1, 0, 1, 2, 3, 4, 5, 6, 7] # NOOP, UP, RIGHT, LEFT, DOWN, UPRIGHT, UPLEFT, DOWNRIGHT
-        self.non_fire_actions_ = [3, 4, 5, 6, 7, 8, 9]
-        self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]
+        self.action_space_n = env.action_space()
+
+        if self.action_space_n == 18:
+            self.directions = [-1, 0, 1, 2, 3, 4, 5, 6, 7] # NOOP, UP, RIGHT, LEFT, DOWN, UPRIGHT, UPLEFT, DOWNRIGHT
+            self.non_fire_actions_ = [3, 4, 5, 6, 7, 8, 9]
+            self.fire_actions_ = [1, 10, 11, 12, 13, 14, 15, 16, 17]
+        elif self.action_space_n == 7:
+            self.directions = [0, 2, 3, 4]  # No-op, Up, Right, Left
+            self.non_fire_actions_ = [0, 2, 3, 4]  # No fire actions
+            self.fire_actions_ = [1, 5, 6]  # Fire actions
+        elif self.action_space_n == 9:
+            self.directions = [0, 1, 2, 3, 4, 5 ,6, 7, 8]
 
     def step(self, action):
+        if self.action_space_n == 18:
+            if action < 2:
+                direction = -1
+            else:
+                direction = action - 2
 
-        # self.env.reward_mode = self.reward_mode
-        if action < 2:
-            direction = -1
-        else:
-            direction = action - 2
+            if direction == -1: # no move
+                # perturb move first
+                fire = action # 0: no fire, 1: FIRE
+            else:
+                direction = np.mod(direction, 8)
+                fire = int(direction/8)
 
-        if direction == -1: # no move
-            # perturb move first
-            fire = action # 0: no fire, 1: FIRE
-        else:
-            direction = np.mod(direction, 8)
-            fire = int(direction/8)
+            # perturb fire
+            if np.random.rand() < self.eps:
+                fire = np.random.choice([0, 1])
 
-        # perturb fire
-        if np.random.rand() < self.eps:
-            fire = np.random.choice([0, 1])
+            # perturb direction
+            if np.random.rand() < self.eps:
+                direction = np.random.choice(self.directions)
 
-        # perturb direction
-        if np.random.rand() < self.eps:
-            direction = np.random.choice(self.directions)
+            # assembly the action
+            if direction == -1:
+                action_ = fire
+            else:
+                action_ = direction + 8 * fire + 2
 
-        # assembly the action
-        if direction == -1:
-            action_ = fire
-        else:
-            action_ = direction + 8 * fire + 2
+        elif self.action_space_n == 7:
+            if np.random.rand() < self.eps:
+                fire = np.random.choice([0, 1])
+            else:
+                fire = 1 if action in self.fire_actions_ else 0
+
+                # perturb direction action with probability eps
+            if np.random.rand() < self.eps:
+                direction = np.random.choice(self.directions)
+            else:
+                direction = action if action in self.non_fire_actions_ else action - 4  # Fire actions have direction minus 4
+
+                # assemble the action based on direction and fire
+            if direction == 0:  # No-op
+                action_ = 0
+            elif fire == 1:
+                if direction == 3:  # Right
+                    action_ = 5  # Right with Fire
+                elif direction == 4:  # Left
+                    action_ = 6 # Left with Fire
+                else:
+                    action_ = direction
+            else:
+                action_ = direction
+            action_ = np.clip(action_, 0, 6)
+
+        elif self.action_space_n == 9:
+            if np.random.rand() < self.eps:
+                action = np.random.choice(self.directions)
+            if action == 0:
+                action_ = 0
+            else:
+                action_ = action
 
         return self.env.step(action_)

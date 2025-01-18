@@ -108,18 +108,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             # action_prob_seed_schedule = np.repeat(action_mode_seed, 100000)
 
         else: # if schedule_mode is 1,3,5,7 then continuous
-            action_prob_seed_schedule = np.random.rand(1000000)/5
-
-        if debug:
-            rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
-            rand_cond_seed = np.array(rand_cond_seed).flatten()
-
-            # # random shuffle of the predefined reward modes
-            np.random.shuffle(rand_cond_seed)
-            rand_cond_seed = np.append(1, rand_cond_seed)
-
-            # repeat each of them 100k times
-            reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
+            action_prob_seed_schedule = np.random.rand(2000000)/5
 
 
         return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
@@ -130,10 +119,10 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='sunrise_mse_loss', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='sunrise_1e6', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -157,7 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-    parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
+    parser.add_argument('--evaluation-interval', type=int, default=5000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
     # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
     parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -175,13 +164,12 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
-    parser.add_argument('--mse_loss', type=int, default=0, help='0 = True, 1 = False')
     # Setup
     args = parser.parse_args()
 
     # wandb intialize
-    if args.id == 'sunrise_mse_loss':
-        wandb.init(project="e_mse",
+    if args.id == 'sunrise_1e6':
+        wandb.init(project="block_rb",
                    name="s_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
                    config=args.__dict__
                    )
@@ -294,6 +282,8 @@ if __name__ == '__main__':
         selected_en_index = np.random.randint(args.num_ensemble)
 
         while T < args.learn_start:
+            if T % 10000 ==0:
+                print(f"Running memory: {T}/{args.learn_start} for game: {args.game}")
             env.eps = action_probs_[T]
             env.env.reward_mode = reward_mode_[T]
             action_p = env.eps
@@ -304,7 +294,8 @@ if __name__ == '__main__':
                 selected_en_index = np.random.randint(args.num_ensemble)
 
             if T % args.replay_frequency == 0:
-                dqn.reset_noise()
+                for en_index in range(args.num_ensemble):
+                    dqn_list[en_index].reset_noise()  # Draw a new set of noisy weights
 
             # UCB exploration
             if args.ucb_infer > 0:
@@ -352,7 +343,8 @@ if __name__ == '__main__':
                 selected_en_index = np.random.randint(args.num_ensemble)
 
             if T % args.replay_frequency == 0:
-                dqn.reset_noise()
+                for en_index in range(args.num_ensemble):
+                    dqn_list[en_index].reset_noise()  # Draw a new set of noisy weights
 
             # UCB exploration
             if args.ucb_infer > 0:
@@ -428,7 +420,7 @@ if __name__ == '__main__':
 
                 for en_index in range(args.num_ensemble):
                     # Train with n-step distributional double-Q learning
-                    q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
+                    q_loss, batch_loss, mse_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
                                                                next_states, nonterminals, weights,
                                                                masks[:, en_index], weight_Q)
                     if en_index == 0:
@@ -458,6 +450,7 @@ if __name__ == '__main__':
                                'eval/timestep': T,
                                'Q-value/Q-value': avg_Q,
                                'Q-value/batch-loss': batch_loss,
+                               'Q-value/mse-loss': mse_loss,
                                'Q-value/batch-std-Q-mean': std_Q_mean,
                                'Q-value/batch-std-Q-min': std_Q_min,
                                'Q-value/batch-std-Q-max': std_Q_max,

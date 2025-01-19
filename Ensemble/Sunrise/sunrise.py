@@ -120,7 +120,7 @@ if __name__ == '__main__':
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='sunrise_1e6', help='Experiment ID')
-    parser.add_argument('--seed', type=int, default=122, help='Random seed')
+    parser.add_argument('--seed', type=int, default=125, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     # ensemble
     parser.add_argument('--num-ensemble', type=int, default=5, metavar='N', help='Number of ensembles')
     parser.add_argument('--beta-mean', type=float, default=1.0, help='mean of bernoulli')
-    parser.add_argument('--temperature', type=float, default=40, help='temperature for CF')
+    parser.add_argument('--temperature', type=float, default=10, help='temperature for CF')
     parser.add_argument('--ucb-infer', type=float, default=1, help='coeff for UCB infer')
     parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB train')
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')

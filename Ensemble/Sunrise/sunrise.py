@@ -120,7 +120,8 @@ if __name__ == '__main__':
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='sunrise_1e6', help='Experiment ID')
-    parser.add_argument('--seed', type=int, default=125, help='Random seed')
+    parser.add_argument('--iteration', type=int, default=0, help='Number of iterations')
+    parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
@@ -179,10 +180,11 @@ if __name__ == '__main__':
         print(' ' * 26 + k + ': ' + str(v))
 
     # exp name
-    exp_name = args.id + '_' + str(args.num_ensemble) + '/' + args.game
+    exp_name = args.id + '/' + args.game
     exp_name += '/Beta_' + str(args.beta_mean) + '_T_' + str(args.temperature)
     exp_name +='_UCB_I_' + str(args.ucb_infer) + '_UCB_T_' + str(args.ucb_train) + '/'
     exp_name += '/seed_' + str(args.seed) + '/'
+    exp_name += str(args.iteration) + '/'
 
     results_dir = os.path.join('./results', exp_name)
     if not os.path.exists(results_dir):
@@ -271,7 +273,7 @@ if __name__ == '__main__':
             dqn_list[en_index].eval()
 
         # KM: test code
-        avg_reward, avg_Q = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
+        avg_reward, avg_Q, eval_index = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
                                           num_ensemble=args.num_ensemble, evaluate=True)  # Test
         print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
     else:
@@ -435,8 +437,7 @@ if __name__ == '__main__':
             if T % args.evaluation_interval == 0:
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
-                                                  num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
+                avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir, num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
 
 

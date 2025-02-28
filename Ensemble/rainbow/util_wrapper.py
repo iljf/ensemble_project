@@ -374,7 +374,7 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 50
 
                 return obs, shaped_reward, done
-            else: # 0
+            else: # 0isinstance
                 return obs, reward, done
 
         # dodge everything, no shooting.

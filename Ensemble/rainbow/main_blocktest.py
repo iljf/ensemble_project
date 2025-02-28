@@ -110,17 +110,6 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         else: # if schedule_mode is 1,3,5,7 then continuous
             action_prob_seed_schedule = np.random.rand(200000)/5
 
-        if debug:
-            rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
-            rand_cond_seed = np.array(rand_cond_seed).flatten()
-
-            # # random shuffle of the predefined reward modes
-            np.random.shuffle(rand_cond_seed)
-            rand_cond_seed = np.append(1, rand_cond_seed)
-
-            # repeat each of them 100k times
-            reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
-
 
         return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
 
@@ -134,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
-    parser.add_argument('--model_name', type=str, default='DDQV', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
+    parser.add_argument('--model_name', type=str, default='DQNV', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN]')
     parser.add_argument('--game', type=str, default='road_runner', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(2e4), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
@@ -185,22 +174,22 @@ if __name__ == '__main__':
     # Setup
     args = parser.parse_args()
 
-    if args.id == 'Diverse_rainbow':
-        wandb.init(project="diverse_rainbow",
-                   name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
-                   config=args.__dict__
-                   )
-    elif args.id == 'block_rb_r1':
-        wandb.init(project="block_rb",
-               name=args.model_name + "_r_ " + args.game + "_b_" + str(args.block_id) + "_Seed" + str(args.seed),
-               config=args.__dict__
-               )
-
-    elif args.id == 'mse_loss_200k':
-        wandb.init(project="block_rb",
-                   name=args.model_name + "_r_ " + args.game + "_Seed" + str(args.seed),
-                   config=args.__dict__
-                   )
+    # if args.id == 'Diverse_rainbow':
+    #     wandb.init(project="diverse_rainbow",
+    #                name=args.model_name + " " + args.game + " " + "Seed" + str(args.seed),
+    #                config=args.__dict__
+    #                )
+    # elif args.id == 'block_rb_r1':
+    #     wandb.init(project="block_rb",
+    #            name=args.model_name + "_r_ " + args.game + "_b_" + str(args.block_id) + "_Seed" + str(args.seed),
+    #            config=args.__dict__
+    #            )
+    #
+    # elif args.id == 'mse_loss_200k':
+    #     wandb.init(project="block_rb",
+    #                name=args.model_name + "_r_ " + args.game + "_Seed" + str(args.seed),
+    #                config=args.__dict__
+    #                )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -369,15 +358,15 @@ if __name__ == '__main__':
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 dqn.train()
 
-                wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                            'eval/action_prob': action_probs_[T-1],
-                            'eval/reward': reward,
-                            'eval/Average_reward': avg_reward,
-                            'eval/timestep': T,
-                            'Q-value/Q-value': avg_Q,
-                            'Q-value/batch-loss': batch_loss,
-                            'Q-value/CE-loss': CE_loss
-                             },step=T)
+                # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                #             'eval/action_prob': action_probs_[T-1],
+                #             'eval/reward': reward,
+                #             'eval/Average_reward': avg_reward,
+                #             'eval/timestep': T,
+                #             'Q-value/Q-value': avg_Q,
+                #             'Q-value/batch-loss': batch_loss,
+                #             'Q-value/CE-loss': CE_loss
+                #              },step=T)
 
                 # If memory path provided, save it
                 if args.memory is not None:

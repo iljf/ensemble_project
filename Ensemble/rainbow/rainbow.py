@@ -135,7 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='Rainbow', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN, Rainbow]')
-    parser.add_argument('--game', type=str, default='kangaroo', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='chopper_command', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(2e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-    parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
+    parser.add_argument('--evaluation-interval', type=int, default=5000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
     # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
     parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')

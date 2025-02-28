@@ -45,7 +45,7 @@ parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help=
 parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='η', help='Learning rate')
 parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
 parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
-parser.add_argument('--learn-start', type=int, default=int(20e3), metavar='STEPS', help='Number of steps before starting training')
+parser.add_argument('--learn-start', type=int, default=int(1600), metavar='STEPS', help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
 parser.add_argument('--evaluation-interval', type=int, default=1000, metavar='STEPS', help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
@@ -66,10 +66,10 @@ parser.add_argument('--ucb-train', type=float, default=1, help='coeff for UCB tr
 # Setup
 args = parser.parse_args()
 
-wandb.init(project="s_r_ref",
-           name="S_" + "cn_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
-               config=args.__dict__
-               )
+# wandb.init(project="s_r_ref",
+#            name="S_" + "cn_" + args.game + " " + "Seed" + str(args.seed) + "_B_" + str(args.beta_mean) + "_T_" + str(args.temperature) + "_UCB_I" + str(args.ucb_infer),
+#                config=args.__dict__
+#                )
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
@@ -120,6 +120,7 @@ def save_memory(memory, memory_path, disable_bzip):
 env = Env(args)
 env.train()
 action_space = env.action_space()
+
 
 # Agent
 dqn_list = []
@@ -262,15 +263,15 @@ else:
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].train()  # Set DQN (online network) back to training mode
-                wandb.log({'eval/reward': reward,
-                           'eval/Average_reward': avg_reward,
-                           'eval/timestep': T,
-                           'Q-value/Q-value': avg_Q,
-                           'Q-value/batch-loss': batch_loss,
-                           'Q-value/batch-std-Q-mean': std_Q_mean,
-                           'Q-value/batch-std-Q-min': std_Q_min,
-                           'Q-value/batch-std-Q-max': std_Q_max,
-                           }, step=T)
+                # wandb.log({'eval/reward': reward,
+                #            'eval/Average_reward': avg_reward,
+                #            'eval/timestep': T,
+                #            'Q-value/Q-value': avg_Q,
+                #            'Q-value/batch-loss': batch_loss,
+                #            'Q-value/batch-std-Q-mean': std_Q_mean,
+                #            'Q-value/batch-std-Q-min': std_Q_min,
+                #            'Q-value/batch-std-Q-max': std_Q_max,
+                #            }, step=T)
                 # If memory path provided, save it
                 if args.memory is not None:
                     save_memory(mem, args.memory, args.disable_bzip_memory)

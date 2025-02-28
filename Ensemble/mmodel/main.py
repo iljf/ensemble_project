@@ -49,6 +49,10 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'ignore jets'}
         elif env_name == 'bank_heist':
             reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'assault':
+            reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'krull':
+            reward_mode_info = {0: 'default', 1: 'car persuit'}
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
@@ -118,7 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
     parser.add_argument('--iteration', type=int, default=2, help='Number of iteration')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='frostbite', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='bank_heist', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -304,6 +308,7 @@ if __name__ == '__main__':
             if T % args.replay_frequency == 0:
                 dqn.reset_noise()
 
+            # arbitration control
             if args.ucb_infer == 0:
                 online_Qlist = []
                 target_Qlist = []
@@ -347,6 +352,34 @@ if __name__ == '__main__':
                 reliability = momentum_reliability / momentum_reliability.sum()
 
                 state = next_state
+
+                # UCB exploration
+            if args.ucb_infer > 0:
+                mean_Q, var_Q = None, None
+                L_target_Q = []
+                for en_index in range(args.num_ensemble):
+                    target_Q = dqn_list[en_index].get_online_q(state)
+                    L_target_Q.append(target_Q)
+                    if en_index == 0:
+                        mean_Q = target_Q / args.num_ensemble
+                    else:
+                        mean_Q += target_Q / args.num_ensemble
+                temp_count = 0
+                for target_Q in L_target_Q:
+                    if temp_count == 0:
+                        var_Q = (target_Q - mean_Q) ** 2
+                    else:
+                        var_Q += (target_Q - mean_Q) ** 2
+                    temp_count += 1
+                var_Q = var_Q / temp_count
+                std_Q = torch.sqrt(var_Q).detach()
+                ucb_score = mean_Q + args.ucb_infer * std_Q
+                action = ucb_score.argmax(1)[0].item()
+
+            # Choose an action greedily
+            if args.ucb_infer == -1:
+                action = dqn_list[selected_en_index].act(state)
+
 
             next_state, reward, done = env.step(action)
 

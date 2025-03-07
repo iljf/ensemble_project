@@ -53,6 +53,12 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'car persuit'}
         elif env_name == 'krull':
             reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'alien':
+            reward_mode_info = {0: 'default', 1: 'track aliens'}
+        elif env_name == 'asterix':
+            reward_mode_info = {0: 'default', 1: 'objective reward decline'}
+        elif env_name == 'battle_zone':
+            reward_mode_info = {0: 'default', 1: 'focus on airships'}
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
@@ -120,9 +126,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='ACED', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
-    parser.add_argument('--iteration', type=int, default=2, help='Number of iteration')
+    parser.add_argument('--iteration', type=int, default=0, help='Number of iteration')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='bank_heist', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='battle_zone', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')

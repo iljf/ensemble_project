@@ -479,6 +479,82 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
+        if self.env.env_name == 'alien':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 5
+                    if reward == 500:
+                        shaped_reward = 1000
+                    if reward == 1000:
+                        shaped_reward = 2000
+                    if reward == 2000:
+                        shaped_reward = 3000
+                else:
+                    if reward == 10:
+                        shaped_reward = 5
+                    if reward == 500:
+                        shaped_reward = 1000
+                    if reward == 1000:
+                        shaped_reward = 2000
+                    if reward == 2000:
+                        shaped_reward = 3000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'asterix':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 50:
+                        shaped_reward = 30
+                    if reward == 100:
+                        shaped_reward = 70
+                    if reward == 200:
+                        shaped_reward = 150
+                    if reward == 300:
+                        shaped_reward = 210
+                else:
+                    if reward == 50:
+                        shaped_reward = 30
+                    if reward == 100:
+                        shaped_reward = 70
+                    if reward == 200:
+                        shaped_reward = 150
+                    if reward == 300:
+                        shaped_reward = 210
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'battle_zone':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 1000:
+                        shaped_reward = 500
+                    if reward == 3000:
+                        shaped_reward = 5000
+                    if reward == 5000:
+                        shaped_reward = 7000
+                else:
+                    if reward == 1000:
+                        shaped_reward = 500
+                    if reward == 3000:
+                        shaped_reward = 5000
+                    if reward == 5000:
+                        shaped_reward = 7000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+
+
 class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):
         super(Action_random, self).__init__(env)

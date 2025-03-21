@@ -59,6 +59,36 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'objective reward decline'}
         elif env_name == 'battle_zone':
             reward_mode_info = {0: 'default', 1: 'focus on airships'}
+        elif env_name == 'boxing':
+            reward_mode_info = {0: 'default', 1: '1 for punch 2 for jab'}
+        elif env_name == 'amidar':
+            reward_mode_info = {0: 'default', 1: 'walking through maze'}
+        elif env_name == 'breakout':
+            reward_mode_info = {0: 'default', 1: 'reverse reward'}
+        elif env_name == 'demon_attack':
+            reward_mode_info = {0: 'default', 1: 'Shoot demons'}
+        elif env_name == 'freeway':
+            reward_mode_info = {0: 'default', 1: 'negative reward for mistakes'}
+        elif env_name == 'gopher':
+            reward_mode_info = {0: 'default', 1: 'kill gopher'}
+        elif env_name == 'hero':
+            reward_mode_info = {0: 'default', 1: 'use all dynamites'}
+        elif env_name == 'kungfu_master':
+            reward_mode_info = {0: 'default', 1: 'use more kicks'}
+        elif env_name == 'mspacman':
+            reward_mode_info = {0: 'default', 1: 'collect fruits and ghosts'}
+        elif env_name == 'pong':
+            reward_mode_info = {0: 'default', 1: 'half the point for player'}
+        elif env_name == 'private_eye':
+            reward_mode_info = {0: 'default', 1: 'additional points for getting hit by a brick or flowerpot'}
+        elif env_name == 'qbert':
+            reward_mode_info = {0: 'default', 1: 'kill snakes'}
+        elif env_name == 'seaquest':
+            reward_mode_info = {0: 'default', 1: 'kill fish'}
+        elif env_name == 'upndown':
+            reward_mode_info = {0: 'default', 1: 'negative reward for moving'}
+
+
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
@@ -126,9 +156,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument('--id', type=str, default='ACED', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
-    parser.add_argument('--iteration', type=int, default=0, help='Number of iteration')
+    parser.add_argument('--iteration', type=int, default=2, help='Number of iteration')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='battle_zone', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='seaquest', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')

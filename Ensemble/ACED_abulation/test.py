@@ -89,6 +89,7 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
                 if done:
                     state, reward_sum, done = env.reset(), 0, False
                 if args.evaluate:
+                    # random reliabilty
                     if args.permutation == 1:
                         Q_list = []
                         reliability = np.random.uniform(0.1,0.3, size=num_ensemble)

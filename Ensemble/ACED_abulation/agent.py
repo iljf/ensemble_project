@@ -11,8 +11,10 @@ import torch.nn.functional as F
 from model import DQN, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN, Rainbow
 
 class Agent():
-    def __init__(self, args, env, model): # shared memory
+    def __init__(self, args, env, model, index=0): # shared memory
         self.action_space = env.action_space()
+        self.index = index
+        self.args = args
         self.atoms = args.atoms
         self.Vmin = args.V_min
         self.Vmax = args.V_max
@@ -27,27 +29,6 @@ class Agent():
         #TODO: Q networks for each agents
         self.online_net = self.init_model(args, model, self.action_space).to(device=args.device)
 
-        if args.evaluate:
-            for en_index in range(args.num_ensemble):
-                model_path = args.id + '/' + args.game
-                model_path += '/Beta_' + str(args.beta_mean) + '_T_' + str(args.temperature)
-                model_path += '_UCB_I_' + str(args.ucb_infer) + '_UCB_T_' + str(args.ucb_train) + '/'
-                model_path += '/seed_' + str(args.seed) + '/'
-                model_path += '/iteration_' + str(args.iteration) + '/'
-                model_path += 'block_%d_%dth_model.pth' % (args.block_id, en_index)
-                results_dir = os.path.join('./results', model_path)
-
-            if os.path.isfile(results_dir):
-                state_dict = torch.load(results_dir, map_location='cpu')  # Always load tensors onto CPU by default, will shift to GPU if necessary
-                if 'conv1.weight' in state_dict.keys():
-                    for old_key, new_key in (('conv1.weight', 'convs.0.weight'), ('conv1.bias', 'convs.0.bias'), ('conv2.weight', 'convs.2.weight'), ('conv2.bias', 'convs.2.bias'), ('conv3.weight', 'convs.4.weight'), ('conv3.bias', 'convs.4.bias')):
-                        state_dict[new_key] = state_dict[old_key]  # Re-map state dict for old pretrained models
-                        del state_dict[old_key]  # Delete old keys for strict load_state_dict
-                self.online_net.load_state_dict(state_dict)
-                print("Loading pretrained model: " + results_dir)
-            else:  # Raise error if incorrect model path provided
-                raise FileNotFoundError(results_dir)
-
         self.online_net.train()
 
         # self.target_net = DQN(args, self.action_space).to(device=args.device)
@@ -61,6 +42,30 @@ class Agent():
 
         self.optimiser = optim.Adam(self.online_net.parameters(), lr=args.learning_rate, eps=args.adam_eps)
         self.lr_schedular = CosineAnnealingWarmRestarts(self.optimiser, T_0=200000)
+
+    def load_weights(self, block_id):
+        model_path = 'ACED' + '/' + self.args.game
+        model_path += '/Beta_' + str(self.args.beta_mean) + '_T_' + str(self.args.temperature)
+        model_path += '_UCB_I_' + str(self.args.ucb_infer) + '_UCB_T_' + str(self.args.ucb_train) + '/'
+        model_path += '/seed_' + str(self.args.seed) + '/'
+        model_path += '/iteration_' + str(self.args.iteration) + '/'
+        model_path += f'block_{block_id}_{self.index}th_model.pth'
+
+        results_dir = os.path.join('./results', model_path)
+
+        if os.path.isfile(results_dir):
+            state_dict = torch.load(results_dir, map_location='cpu')
+            if 'conv1.weight' in state_dict.keys():
+                for old_key, new_key in (
+                    ('conv1.weight', 'convs.0.weight'), ('conv1.bias', 'convs.0.bias'),
+                    ('conv2.weight', 'convs.2.weight'), ('conv2.bias', 'convs.2.bias'),
+                    ('conv3.weight', 'convs.4.weight'), ('conv3.bias', 'convs.4.bias')):
+                    state_dict[new_key] = state_dict[old_key]
+                    del state_dict[old_key]
+            self.online_net.load_state_dict(state_dict)
+            print(f"[Agent {self.index}] Loaded weights from block {block_id}")
+        else:
+            raise FileNotFoundError(f"Model not found: {results_dir}")
 
         #TODO: Modles for each agents
     def init_model(self, args, model, action_space):
@@ -148,7 +153,7 @@ class Agent():
             return q_values
         else:
             q_values = self.target_net(next_state)
-            return q_values.max()
+            return q_values.max(1).values
 
 
     

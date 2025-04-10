@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 import pickle
 import wandb
+import pandas as pd
 
 import atari_py
 import numpy as np
@@ -154,11 +155,11 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='ACED', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='ACED_mse', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
-    parser.add_argument('--iteration', type=int, default=2, help='Number of iteration')
+    parser.add_argument('--iteration', type=int, default=0, help='Number of iteration')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='seaquest', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='alien', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -204,18 +205,18 @@ if __name__ == '__main__':
     parser.add_argument('--scheduler-mode', type=int, default=2, metavar='S', help='Scheduler seed/mode')
     parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
-    parser.add_argument('--block-id', type=int, default=5, help='testing schedule block')
-    parser.add_argument('--permutation', type=int, default=1, help='testing permutation')
+    parser.add_argument('--block-id', type=int, default=0, help='testing schedule block')
+    parser.add_argument('--permutation', type=int, default=3, help='testing permutation')
 
     # Setup
     args = parser.parse_args()
 
     # wandb intialize
-    if args.id == 'ACED':
-        wandb.init(project="block_rb",
-                   name="ACED_" + args.game + " " + "Seed" + str(args.seed) + "_i_" + str(args.iteration),
-                   config=args.__dict__
-                   )
+    # if args.id == 'ACED':
+    #     wandb.init(project="block_rb",
+    #                name="ACED_" + args.game + " " + "Seed" + str(args.seed) + "_i_" + str(args.iteration),
+    #                config=args.__dict__
+    #                )
 
     print(' ' * 26 + 'Options')
     for k, v in vars(args).items():
@@ -229,8 +230,10 @@ if __name__ == '__main__':
     exp_name += '/iteration_' + str(args.iteration) + '/'
 
     results_dir = os.path.join('./results', exp_name)
-    if not os.path.exists(results_dir):
-        os.makedirs(results_dir)
+    # if not os.path.exists(results_dir):
+    #     os.makedirs(results_dir)
+
+    args.evaluate = True
 
     metrics = {'steps': [], 'rewards': [], 'Qs': [], 'best_avg_reward': -float('inf')}
     np.random.seed(args.seed)
@@ -254,6 +257,31 @@ if __name__ == '__main__':
             with bz2.open(memory_path, 'rb') as zipped_pickle_file:
 
                 return pickle.load(zipped_pickle_file)
+
+
+    def memory_agent_sampling(mse_log, block_id, temperature=0.8):
+        sampled_agents = []
+        reliabilities = []
+        block_ids = []
+
+        for mse_vec in mse_log:
+            mse_tensor = torch.tensor(mse_vec)
+            reli = torch.softmax(-mse_tensor / temperature, dim=0).numpy()
+            sampled_agent = np.random.choice(len(reli), p=reli)
+            sampled_agents.append(sampled_agent)
+            reliabilities.append(reli.tolist())
+            block_ids.append(block_id)
+
+        agent_sample_counts = {i: sampled_agents.count(i) for i in range(len(reli))}
+
+        df = pd.DataFrame({
+            'block_id': block_ids,
+            'sampled_agent': sampled_agents,
+            'reliability': reliabilities,
+            'mse': mse_log
+        })
+
+        return df, agent_sample_counts
 
 
     def save_memory(memory, memory_path, disable_bzip):
@@ -281,7 +309,7 @@ if __name__ == '__main__':
     models = ['DQN', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
     for i in range(args.num_ensemble):
         model = models[i % len(models)]
-        dqn = Agent(args, env, model) ## shared replay memory
+        dqn = Agent(args, env, model, index=i) ## shared replay memory
         # dqn = Agent(args, env, model, ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble)) ## for individual replay memory
         dqn_list.append(dqn)
 
@@ -316,16 +344,23 @@ if __name__ == '__main__':
         state = next_state
         T += 1
 
+    all_sampled_results = []
+    reward_log = []
     # Make data frame with evaluating
     if args.evaluate:
         for block_id in range(5):
             args.block_id = block_id
 
             global_seed_initailizer(args.seed)
+
+            for en_index in range(args.num_ensemble):
+                dqn_list[en_index].load_weights(block_id)
+
             reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game,
                                                                      min_max_action_prob=[args.action_prob_min,
                                                                                           args.action_prob_max])
             reward_mode_, action_probs_ = reward_mode_[(block_id) * int(2e5):(block_id + 1) * int(2e5)], action_probs_[(block_id) * int(2e5):(block_id + 1) * int(2e5)]
+
             env.eps = action_probs_[0]
             env.env.reward_mode = reward_mode_[0]
             action_p = env.eps
@@ -338,9 +373,38 @@ if __name__ == '__main__':
 
 
         # KM: test code
-        avg_reward, avg_Q = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
-                                          num_ensemble=args.num_ensemble, evaluate=True, mermoy=mem)  # Test
-        print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+            if args.permutation == 3:
+                avg_reward, avg_Q, episode_reward, mse_log = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
+                                                                  num_ensemble=args.num_ensemble, scheduler=scheduler,
+                                                                  action_p=action_p, evaluate=True, memory=mem)  # Test
+                print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+                df_sampled, counts = memory_agent_sampling(mse_log, block_id, temperature=args.energy_temperature)
+                all_sampled_results.append(df_sampled)
+            else:
+                avg_reward, avg_Q, episode_reward = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
+                                                  num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p, evaluate=True, memory=mem)  # Test
+                print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+
+                for ep_idx, r in enumerate(episode_reward):
+                    reward_log.append({
+                        "block_id": block_id,
+                        "episode": ep_idx,
+                        "reward": r,
+                        "avg_reward": avg_reward
+                    })
+
+        directory = args.id + '/' + args.game
+        results_dir_ = os.path.join('./results', directory)
+        os.makedirs(results_dir_, exist_ok=True)
+        if args.permutation == 3:
+            df_mse = pd.concat(all_sampled_results, ignore_index =True)
+            df_mse.to_csv(os.path.join(results_dir_, f'{args.id}_{args.game}_mse.csv'))
+            print("Done")
+        else:
+            df = pd.DataFrame(reward_log)
+            df.to_csv(os.path.join(results_dir_, f'{args.id}_{args.game}.csv'))
+            print("Done")
+
     else:
         # Training loop
         for en_index in range(args.num_ensemble):

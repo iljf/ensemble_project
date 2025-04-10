@@ -71,6 +71,7 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
 
     T_rewards, T_Qs = [], []
     action_space = env.action_space()
+    mse_log = []
         
     # Test performance over several episodes
     done = True
@@ -88,75 +89,85 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
             while True:
                 if done:
                     state, reward_sum, done = env.reset(), 0, False
-                if args.evaluate:
-                    if args.permutation == 1:
-                        Q_list = []
-                        reliability = np.random.uniform(0.1,0.3, size=num_ensemble)
+                if args.permutation == 1:
+                    Q_list = []
+                    reliability = np.random.uniform(0.2,0.2, size=num_ensemble)
+                    for en_index in range(num_ensemble):
+                        online_Q = dqn[en_index].ensemble_q(state)
+                        Q_list.append(online_Q)
+                    Q_tot = sum(Q_list[i] * reliability[i] for i in range(len(Q_list)))
+                    action = Q_tot.argmax(1).item()
+
+                    state, reward, done = env.step(action)
+                    reward_sum += reward
+                    # if done or T >= max_steps:
+                    if done:
+                        T_rewards.append(reward_sum)
+                        break
+                if args.permutation == 2:
+                    random_agent = np.random.randint(0, num_ensemble)
+                    q_values = dqn[random_agent].ensemble_q(state)
+                    action = q_values.argmax(1).item()
+
+                    state, reward, done = env.step(action)
+                    reward_sum += reward
+                    if done:
+                        T_rewards.append(reward_sum)
+                        break
+                if args.permutation == 3:
+                    Q_list = []
+                    q_tot = 0
+                    for en_index in range(num_ensemble):
+                        online_Q = dqn[en_index].ensemble_q(state)
+                        Q_list.append(online_Q)
+                        if en_index == 0:
+                            q_tot = online_Q
+                        else:
+                            q_tot += online_Q
+                    action = q_tot.argmax(1).item()
+                    next_state, reward, done = env.step(action)
+                    if memory is not None:
+                        nonterminal = 1.0 if not done else 0.0
+                        mse_list = []
                         for en_index in range(num_ensemble):
-                            online_Q = dqn[en_index].ensemble_q(state)
-                            Q_list.append(online_Q)
-                        Q_tot = sum(Q_list[i] * reliability[i] for i in range(len(Q_list)))
-                        action = Q_tot.argmax().item()
+                            online_Q = Q_list[en_index][0, action]
+                            target_Q = dqn[en_index].get_target_q_mse(state)
+                            target_Q = reward + (nonterminal * args.discount * target_Q)
+                            target_Q = torch.flatten(target_Q)
+                            online_Q = torch.flatten(online_Q)
+                            mse_loss = F.mse_loss(online_Q, target_Q)
+                            mse_list.append(mse_loss)
+                        mse_list[-1] = args.mse_weights * mse_list[-1]  # dist-DQN
+                        mse_tensor = torch.stack(mse_list)
+                        # memory.append(state, action, reward, done, mse_tensor)
+                        mse_log.append(mse_tensor.cpu().numpy().tolist())
 
-                        next_state, reward, done = env.step(action)
-                        if memory is not None:
-                            nonterminal = 1.0 if not done else 0.0
-                            mse_list = []
-                            for en_index in range(num_ensemble):
-                                online_Q = Q_list[en_index][0, action]
-                                target_Q = dqn[en_index].get_target_q_mse(state)
-                                target_Q = reward + (nonterminal * args.discount * target_Q)
-                                target_Q = torch.flatten(target_Q)
-                                online_Q = torch.flatten(online_Q)
-                                mse_loss = F.mse_loss(online_Q, target_Q)
-                                mse_list.append(mse_loss)
-                            mse_list[-1] = args.mse_weights * mse_list[-1]  # dist-DQN
-                            mse_tensor = torch.stack(mse_list)
-                            memory.append(state, action, reward, done, mse_tensor)
+                    state = next_state
+                    reward_sum += reward
+                    if args.render:
+                        env.render()
+                    # if done or T >= max_steps:
+                    if done:
+                        T_rewards.append(reward_sum)
+                        break
+                else:
+                    q_tot = 0
+                    for en_index in range(num_ensemble):
+                        if en_index == 0:
+                            q_tot = dqn[en_index].ensemble_q(state)
+                        else:
+                            q_tot += dqn[en_index].ensemble_q(state)
+                    action = q_tot.argmax(1).item()
 
-                        state = next_state
-                        reward_sum += reward
-                        if args.render:
-                            env.render()
-                        # if done or T >= max_steps:
-                        if done:
-                            T_rewards.append(reward_sum)
-                            break
-                    else:
-                        Q_list = []
-                        q_tot = 0
-                        for en_index in range(num_ensemble):
-                            online_Q = dqn[en_index].ensemble_q(state)
-                            Q_list.append(online_Q)
-                            if en_index == 0:
-                                q_tot = online_Q
-                            else:
-                                q_tot += online_Q
-                        action = q_tot.argmax(1).item()
-                        next_state, reward, done = env.step(action)
-                        if memory is not None:
-                            nonterminal = 1.0 if not done else 0.0
-                            mse_list = []
-                            for en_index in range(num_ensemble):
-                                online_Q = Q_list[en_index][0, action]
-                                target_Q = dqn[en_index].get_target_q_mse(state)
-                                target_Q = reward + (nonterminal * args.discount * target_Q)
-                                target_Q = torch.flatten(target_Q)
-                                online_Q = torch.flatten(online_Q)
-                                mse_loss = F.mse_loss(online_Q, target_Q)
-                                mse_list.append(mse_loss)
-                            mse_list[-1] = args.mse_weights * mse_list[-1]  # dist-DQN
-                            mse_tensor = torch.stack(mse_list)
-                            memory.append(state, action, reward, done, mse_tensor)
+                    state, reward, done = env.step(action)  # Step
+                    reward_sum += reward
+                    if args.render:
+                        env.render()
+                    # if done or T >= max_steps:
+                    if done:
+                        T_rewards.append(reward_sum)
+                        break
 
-                        state = next_state
-                        reward_sum += reward
-                        if args.render:
-                            env.render()
-                        # if done or T >= max_steps:
-                        if done:
-                            T_rewards.append(reward_sum)
-                            break
         env.close()
 
         for state in val_mem:  # Iterate over valid states
@@ -164,7 +175,7 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
                 T_Qs.append(dqn[en_index].evaluate_q(state))
 
         avg_reward, avg_Q = sum(T_rewards) / len(T_rewards), sum(T_Qs) / len(T_Qs)
-        return avg_reward, avg_Q
+        return avg_reward, avg_Q, T_rewards, mse_log
     else:
         for episode_num in range(args.evaluation_episodes):
             reward_mode = scheduler

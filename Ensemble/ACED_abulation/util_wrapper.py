@@ -795,7 +795,7 @@ class Rewardvalue(gym.Wrapper):
             else:  # 0
                 return obs, reward, done
 
-        if self.env.env_name == 'upndown':
+        if self.env.env_name == 'up_n_down':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:

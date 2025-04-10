@@ -72,7 +72,7 @@ def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, eva
     T_rewards, T_Qs = [], []
     action_space = env.action_space()
     mse_log = []
-        
+
     # Test performance over several episodes
     done = True
 

@@ -644,12 +644,12 @@ class Rewardvalue(gym.Wrapper):
                 shaped_reward = reward
                 if not done:
                     if reward == 100:
-                        shaped_reward = 300
+                        shaped_reward = 150
                     if reward == 20:
                         shaped_reward = 10
                 else:
                     if reward == 100:
-                        shaped_reward = 300
+                        shaped_reward = 150
                     if reward == 20:
                         shaped_reward = 10
 
@@ -675,7 +675,7 @@ class Rewardvalue(gym.Wrapper):
             else:  # 0
                 return obs, reward, done
 
-        if self.env.env_name == 'kungfu_master':
+        if self.env.env_name == 'kung_fu_master':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
@@ -701,7 +701,7 @@ class Rewardvalue(gym.Wrapper):
             else:  # 0
                 return obs, reward, done
 
-        if self.env.env_name == 'mspacman':
+        if self.env.env_name == 'ms_pacman':
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
@@ -799,11 +799,23 @@ class Rewardvalue(gym.Wrapper):
             if self.reward_mode == 1:
                 shaped_reward = reward
                 if not done:
-                    if reward == 10:
-                        shaped_reward = -1
+                    if reward == 75:
+                        shaped_reward = 35
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 65:
+                        shaped_reward = 25
+                    if reward == 50:
+                        shaped_reward = 10
                 else:
-                    if reward == 10:
-                        shaped_reward = -1
+                    if reward == 75:
+                        shaped_reward = 35
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 65:
+                        shaped_reward = 25
+                    if reward == 50:
+                        shaped_reward = 10
 
                 return obs, shaped_reward, done
             else:  # 0
@@ -825,13 +837,13 @@ class Action_random(gym.ActionWrapper):
             self.non_fire_actions_ = [0, 2, 3, 4]  # No fire actions
             self.fire_actions_ = [1, 5, 6]  # Fire actions
         elif self.action_space_n == 9:
-            self.directions = [0, 1, 2, 3, 4, 5 ,6, 7, 8]
+            self.directions = [0, 1, 2, 3, 4, 5, 6, 7, 8]
         elif self.action_space_n == 10:
             self.directions = [-1, 0, 1, 2, 3]
         elif self.action_space_n == 4:
             self.directions = [0, 1, 2, 3]
         elif self.action_space_n == 6:
-            self.directions = [-1, 0, 1, 2]
+            self.directions = [-1, 0, 1]
         elif self.action_space_n == 3:
             self.directions = [0, 1, 2]
         elif self.action_space_n == 8:
@@ -876,7 +888,7 @@ class Action_random(gym.ActionWrapper):
             if direction == -1:
                 fire = action
             else:
-                direction = np.mod(direction/5)
+                direction = np.mod(direction,5)
                 fire = int(direction/5)
 
             # perturb fire
@@ -944,7 +956,7 @@ class Action_random(gym.ActionWrapper):
             if direction == -1:
                 fire = action
             else:
-                direction = np.mod(direction/4)
+                direction = np.mod(direction,4)
                 fire = int(direction/4)
 
             # perturb fire
@@ -970,7 +982,7 @@ class Action_random(gym.ActionWrapper):
             if direction == -1:
                 fire = action
             else:
-                direction = np.mod(direction/3)
+                direction = np.mod(direction,3)
                 fire = int(direction/3)
 
             # perturb fire
@@ -996,7 +1008,7 @@ class Action_random(gym.ActionWrapper):
             if direction == -1:
                 fire = action
             else:
-                direction = np.mod(direction/2)
+                direction = np.mod(direction,2)
                 fire = int(direction/2)
 
             # perturb fire

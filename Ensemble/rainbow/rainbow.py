@@ -54,6 +54,39 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'i dont know'}
         elif env_name == 'assault':
             reward_mode_info = {0: 'default', 1: 'i dont know'}
+        elif env_name == 'asterix':
+            reward_mode_info = {0: 'default', 1: 'i dont know'}
+        elif env_name == 'battle_zone':
+            reward_mode_info = {0: 'default', 1: 'focus on airships'}
+        elif env_name == 'boxing':
+            reward_mode_info = {0: 'default', 1: '1 for punch 2 for jab'}
+        elif env_name == 'amidar':
+            reward_mode_info = {0: 'default', 1: 'walking through maze'}
+        elif env_name == 'breakout':
+            reward_mode_info = {0: 'default', 1: 'reverse reward'}
+        elif env_name == 'demon_attack':
+            reward_mode_info = {0: 'default', 1: 'Shoot demons'}
+        elif env_name == 'freeway':
+            reward_mode_info = {0: 'default', 1: 'negative reward for mistakes'}
+        elif env_name == 'gopher':
+            reward_mode_info = {0: 'default', 1: 'kill gopher'}
+        elif env_name == 'hero':
+            reward_mode_info = {0: 'default', 1: 'use all dynamites'}
+        elif env_name == 'kung_fu_master':
+            reward_mode_info = {0: 'default', 1: 'use more kicks'}
+        elif env_name == 'ms_pacman':
+            reward_mode_info = {0: 'default', 1: 'collect fruits and ghosts'}
+        elif env_name == 'pong':
+            reward_mode_info = {0: 'default', 1: 'half the point for player'}
+        elif env_name == 'private_eye':
+            reward_mode_info = {0: 'default', 1: 'additional points for getting hit by a brick or flowerpot'}
+        elif env_name == 'qbert':
+            reward_mode_info = {0: 'default', 1: 'kill snakes'}
+        elif env_name == 'sea_quest':
+            reward_mode_info = {0: 'default', 1: 'kill fish'}
+        elif env_name == 'up_n_down':
+            reward_mode_info = {0: 'default', 1: 'negative reward for moving'}
+
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
@@ -66,8 +99,8 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
 
 
         """
-        reward mode sampling 할때 마지막 400k 에서 500k를 0으로 세팅할때
-        rand_cond_seed = np.append(rand_cond_seed, 0) 으로 뒤에 0을 하나더 넣어줌   
+        reward mode sampling ?? ??? 400k ?? 500k? 0?? ????
+        rand_cond_seed = np.append(rand_cond_seed, 0) ?? ?? 0? ??? ???   
         """
 
         ## reward mode schedule
@@ -79,9 +112,9 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         np.random.shuffle(rand_cond_seed)
         rand_cond_seed = np.append(0, rand_cond_seed)
         # repeat each of them 100k times
-        reward_mode_schedule = np.repeat(rand_cond_seed, 400000)
+        reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
         # overide the last block to be 1
-        reward_mode_schedule[-400000:] = 1
+        reward_mode_schedule[-200000:] = 1
 
         # TODO check the code;
         # repeat by 100k times till 400k
@@ -100,7 +133,7 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             action_prob_seed = np.append(action_prob_seed, 0)
             # repeat each of them 100k times
 
-            action_prob_seed_schedule = np.repeat(action_prob_seed, 400000)
+            action_prob_seed_schedule = np.repeat(action_prob_seed, 200000)
 
             # TODO check the code;
             # repeat by 100k times till 400k
@@ -110,18 +143,6 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
         else: # if schedule_mode is 1,3,5,7 then continuous
             action_prob_seed_schedule = np.random.rand(2000000)/5
 
-        if debug:
-            rand_cond_seed = [ [j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
-            rand_cond_seed = np.array(rand_cond_seed).flatten()
-
-            # # random shuffle of the predefined reward modes
-            np.random.shuffle(rand_cond_seed)
-            rand_cond_seed = np.append(1, rand_cond_seed)
-
-            # repeat each of them 100k times
-            reward_mode_schedule = np.repeat(rand_cond_seed, 600000)
-
-
         return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
 
 
@@ -130,35 +151,36 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='rainbow_mse_loss', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='rainbow_1e6', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
+    parser.add_argument('--iteration', type=int, default=2, help='Number of iterations')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
     # parser.add_argument('--model_name', type=str, default='DistributionalDQN', help='Models of Q networks')
     parser.add_argument('--model_name', type=str, default='Rainbow', help='Models of Q networks = [DQNV, DDQN, NoisyDQN, DuelingDQN, DistributionalDQN, Rainbow]')
-    parser.add_argument('--game', type=str, default='chopper_command', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(2e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--game', type=str, default='qbert', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
     parser.add_argument('--hidden-size', type=int, default=512, metavar='SIZE', help='Network hidden size')
-    parser.add_argument('--noisy-std', type=float, default=0.1, metavar='σ', help='Initial standard deviation of noisy linear layers')
+    parser.add_argument('--noisy-std', type=float, default=0.1, metavar='?', help='Initial standard deviation of noisy linear layers')
     parser.add_argument('--atoms', type=int, default=51, metavar='C', help='Discretised size of value distribution')
     parser.add_argument('--V-min', type=float, default=-10, metavar='V', help='Minimum of value distribution support')
     parser.add_argument('--V-max', type=float, default=10, metavar='V', help='Maximum of value distribution support')
     parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
-    parser.add_argument('--memory-capacity', type=int, default=int(1e5), metavar='CAPACITY', help='Experience replay memory capacity')
+    parser.add_argument('--memory-capacity', type=int, default=int(1e6), metavar='CAPACITY', help='Experience replay memory capacity')
     parser.add_argument('--replay-frequency', type=int, default=4, metavar='k', help='Frequency of sampling from memory')
-    parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='ω', help='Prioritised experience replay exponent (originally denoted α)')
-    parser.add_argument('--priority-weight', type=float, default=0.4, metavar='β', help='Initial prioritised experience replay importance sampling weight')
+    parser.add_argument('--priority-exponent', type=float, default=0.5, metavar='?', help='Prioritised experience replay exponent (originally denoted ?)')
+    parser.add_argument('--priority-weight', type=float, default=0.4, metavar='?', help='Initial prioritised experience replay importance sampling weight')
     parser.add_argument('--multi-step', type=int, default=3, metavar='n', help='Number of steps for multi-step return')
-    parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
-    parser.add_argument('--target-update', type=int, default=int(32000), metavar='τ', help='Number of steps after which to update target network')
+    parser.add_argument('--discount', type=float, default=0.99, metavar='?', help='Discount factor')
+    parser.add_argument('--target-update', type=int, default=int(32000), metavar='?', help='Number of steps after which to update target network')
     parser.add_argument('--reward-clip', type=int, default=1, metavar='VALUE', help='Reward clipping (0 to disable)')
-    parser.add_argument('--learning-rate', type=float, default=0.0001, metavar='η', help='Learning rate')
+    parser.add_argument('--learning-rate', type=float, default=0.0000625, metavar='?', help='Learning rate')
     parser.add_argument('--eps-start', type=float, default=1.0, help='Starting value of epsilon for exploration')
     parser.add_argument('--eps-end', type=float, default=0.01, help='Final value of epsilon after decay')
     parser.add_argument('--eps-decay', type=int, default=int(10e4), help='Number of steps over which epsilon is decayed')
-    parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
+    parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='?', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
@@ -202,9 +224,9 @@ if __name__ == '__main__':
                    config=args.__dict__
                    )
 
-    elif args.id == 'rainbow_mse_loss':
+    elif args.id == 'rainbow_1e6':
         wandb.init(project="block_rb",
-                   name="r_" + args.game + " " + "_r_ " + args.game + "_Seed" + str(args.seed),
+                   name="r_" + args.game + " " + "_r_ " + args.game + "_Seed" + str(args.seed) + "_iteration_" + str(args.iteration),
                    config=args.__dict__
                    )
 
@@ -364,7 +386,7 @@ if __name__ == '__main__':
                 reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
             mem.append(state, action, reward, done)  # Append transition to memory
 
-            mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight β to 1
+            mem.priority_weight = min(mem.priority_weight + priority_weight_increase, 1)  # Anneal importance sampling weight ? to 1
 
             if T % args.replay_frequency == 0:
                 if args.model_name == 'Rainbow':

@@ -374,7 +374,7 @@ class Rewardvalue(gym.Wrapper):
                         shaped_reward = 50
 
                 return obs, shaped_reward, done
-            else: # 0isinstance
+            else: # 0
                 return obs, reward, done
 
         # dodge everything, no shooting.
@@ -479,6 +479,349 @@ class Rewardvalue(gym.Wrapper):
             else: # 0
                 return obs, reward, done
 
+        if self.env.env_name == 'alien':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 10:
+                        shaped_reward = 5
+                    if reward == 500:
+                        shaped_reward = 1000
+                    if reward == 1000:
+                        shaped_reward = 2000
+                    if reward == 2000:
+                        shaped_reward = 3000
+                else:
+                    if reward == 10:
+                        shaped_reward = 5
+                    if reward == 500:
+                        shaped_reward = 1000
+                    if reward == 1000:
+                        shaped_reward = 2000
+                    if reward == 2000:
+                        shaped_reward = 3000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'asterix':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 50:
+                        shaped_reward = 30
+                    if reward == 100:
+                        shaped_reward = 70
+                    if reward == 200:
+                        shaped_reward = 150
+                    if reward == 300:
+                        shaped_reward = 210
+                else:
+                    if reward == 50:
+                        shaped_reward = 30
+                    if reward == 100:
+                        shaped_reward = 70
+                    if reward == 200:
+                        shaped_reward = 150
+                    if reward == 300:
+                        shaped_reward = 210
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'battle_zone':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 1000:
+                        shaped_reward = 500
+                    if reward == 3000:
+                        shaped_reward = 5000
+                    if reward == 5000:
+                        shaped_reward = 7000
+                else:
+                    if reward == 1000:
+                        shaped_reward = 500
+                    if reward == 3000:
+                        shaped_reward = 5000
+                    if reward == 5000:
+                        shaped_reward = 7000
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'boxing':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 1:
+                        shaped_reward = 2
+                    if reward == 2:
+                        shaped_reward = 1
+                else:
+                    if reward == 1:
+                        shaped_reward = 2
+                    if reward == 2:
+                        shaped_reward = 1
+
+                return obs, shaped_reward, done
+            else: # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'amidar':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 1:
+                        shaped_reward = 10
+                    if reward == 6:
+                        shaped_reward = 10
+                else:
+                    if reward == 1:
+                        shaped_reward = 10
+                    if reward == 6:
+                        shaped_reward = 10
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'breakout':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 7:
+                        shaped_reward = 1
+                    if reward == 1:
+                        shaped_reward = 7
+                else:
+                    if reward == 7:
+                        shaped_reward = 1
+                    if reward == 1:
+                        shaped_reward = 7
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'demon_attack':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 20:
+                        shaped_reward = 35
+                    if reward >= 40:
+                        shaped_reward = reward / 2
+                else:
+                    if reward == 20:
+                        shaped_reward = 35
+                    if reward >= 40:
+                        shaped_reward = reward / 2
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'freeway':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 1:
+                        shaped_reward = reward/2
+                else:
+                    if reward == 1:
+                        shaped_reward = reward/2
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'gopher':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 100:
+                        shaped_reward = 150
+                    if reward == 20:
+                        shaped_reward = 10
+                else:
+                    if reward == 100:
+                        shaped_reward = 150
+                    if reward == 20:
+                        shaped_reward = 10
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'hero':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 75:
+                        shaped_reward = 100
+                    if reward == 50:
+                        shaped_reward = 25
+                else:
+                    if reward == 75:
+                        shaped_reward = 100
+                    if reward == 50:
+                        shaped_reward = 25
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'kung_fu_master':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 500:
+                        shaped_reward = 800
+                    if reward == 800:
+                        shaped_reward = 500
+                    if reward == 200:
+                        shaped_reward = 300
+                    if reward == 300:
+                        shaped_reward = 200
+                else:
+                    if reward == 500:
+                        shaped_reward = 800
+                    if reward == 800:
+                        shaped_reward = 500
+                    if reward == 200:
+                        shaped_reward = 300
+                    if reward == 300:
+                        shaped_reward = 200
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'ms_pacman':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 50:
+                        shaped_reward = 100
+                    if reward == 100:
+                        shaped_reward = 200
+                    if reward == 10:
+                        shaped_reward = 5
+                    if reward == 200:
+                        shaped_reward = 300
+                else:
+                    if reward == 50:
+                        shaped_reward = 100
+                    if reward == 100:
+                        shaped_reward = 200
+                    if reward == 10:
+                        shaped_reward = 5
+                    if reward == 200:
+                        shaped_reward = 300
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'pong':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 1:
+                        shaped_reward = 0.5
+                else:
+                    if reward == 1:
+                        shaped_reward = 0.5
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'private_eye':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == -100:
+                        shaped_reward = 10
+                    if reward == -200:
+                        shaped_reward = 20
+                else:
+                    if reward == -100:
+                        shaped_reward = 10
+                    if reward == -200:
+                        shaped_reward = 20
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'qbert':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 25:
+                        shaped_reward = 15
+                    if reward == 500:
+                        shaped_reward = 1000
+                else:
+                    if reward == 25:
+                        shaped_reward = 15
+                    if reward == 500:
+                        shaped_reward = 1000
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'seaquest':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 20:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 20
+                else:
+                    if reward == 20:
+                        shaped_reward = 50
+                    if reward == 50:
+                        shaped_reward = 20
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+        if self.env.env_name == 'upndown':
+            if self.reward_mode == 1:
+                shaped_reward = reward
+                if not done:
+                    if reward == 75:
+                        shaped_reward = 35
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 65:
+                        shaped_reward = 25
+                    if reward == 50:
+                        shaped_reward = 10
+                else:
+                    if reward == 75:
+                        shaped_reward = 35
+                    if reward == 70:
+                        shaped_reward = 30
+                    if reward == 65:
+                        shaped_reward = 25
+                    if reward == 50:
+                        shaped_reward = 10
+
+                return obs, shaped_reward, done
+            else:  # 0
+                return obs, reward, done
+
+
 class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):
         super(Action_random, self).__init__(env)
@@ -494,7 +837,19 @@ class Action_random(gym.ActionWrapper):
             self.non_fire_actions_ = [0, 2, 3, 4]  # No fire actions
             self.fire_actions_ = [1, 5, 6]  # Fire actions
         elif self.action_space_n == 9:
-            self.directions = [0, 1, 2, 3, 4, 5 ,6, 7, 8]
+            self.directions = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        elif self.action_space_n == 10:
+            self.directions = [-1, 0, 1, 2, 3]
+        elif self.action_space_n == 4:
+            self.directions = [0, 1, 2, 3]
+        elif self.action_space_n == 6:
+            self.directions = [-1, 0, 1]
+        elif self.action_space_n == 3:
+            self.directions = [0, 1, 2]
+        elif self.action_space_n == 8:
+            self.directions = [-1, 0, 1, 2]
+        elif self.action_space_n == 14:
+            self.directions = [-1, 0, 1, 2, 3, 4]
 
     def step(self, action):
         if self.action_space_n == 18:
@@ -524,6 +879,40 @@ class Action_random(gym.ActionWrapper):
             else:
                 action_ = direction + 8 * fire + 2
 
+        elif self.action_space_n == 14:
+            if action < 2:
+                direction = -1
+            else:
+                direction = action - 2
+
+            if direction == -1:
+                fire = action
+            else:
+                direction = np.mod(direction,5)
+                fire = int(direction/5)
+
+            # perturb fire
+            if np.random.rand() < self.eps:
+                fire = np.random.choice([0, 1])
+
+            # perturb direction
+            if np.random.rand() < self.eps:
+                direction = np.random.choice(self.directions)
+
+            # assembly the action
+            if direction == -1:
+                action_ = fire
+            else:
+                action_ = direction + 5 * fire + 2
+
+        elif self.action_space_n == 4:
+            if np.random.rand() < self.eps:
+                action = np.random.choice(self.directions)
+            if action == 0:
+                action_ = 0
+            else:
+                action_ = action
+
         elif self.action_space_n == 7:
             if np.random.rand() < self.eps:
                 fire = np.random.choice([0, 1])
@@ -551,6 +940,92 @@ class Action_random(gym.ActionWrapper):
             action_ = np.clip(action_, 0, 6)
 
         elif self.action_space_n == 9:
+            if np.random.rand() < self.eps:
+                action = np.random.choice(self.directions)
+            if action == 0:
+                action_ = 0
+            else:
+                action_ = action
+
+        elif self.action_space_n == 10:
+            if action < 2:
+                direction = -1
+            else:
+                direction = action - 2
+
+            if direction == -1:
+                fire = action
+            else:
+                direction = np.mod(direction,4)
+                fire = int(direction/4)
+
+            # perturb fire
+            if np.random.rand() < self.eps:
+                fire = np.random.choice([0, 1])
+
+            # perturb direction
+            if np.random.rand() < self.eps:
+                direction = np.random.choice(self.directions)
+
+            # assembly the action
+            if direction == -1:
+                action_ = fire
+            else:
+                action_ = direction + 4 * fire + 2
+
+        elif self.action_space_n == 8:
+            if action < 2:
+                direction = -1
+            else:
+                direction = action - 2
+
+            if direction == -1:
+                fire = action
+            else:
+                direction = np.mod(direction,3)
+                fire = int(direction/3)
+
+            # perturb fire
+            if np.random.rand() < self.eps:
+                fire = np.random.choice([0, 1])
+
+            # perturb direction
+            if np.random.rand() < self.eps:
+                direction = np.random.choice(self.directions)
+
+            # assembly the action
+            if direction == -1:
+                action_ = fire
+            else:
+                action_ = min(direction + 3 * fire + 2, 7)
+
+        elif self.action_space_n == 6:
+            if action < 2:
+                direction = -1
+            else:
+                direction = action - 2
+
+            if direction == -1:
+                fire = action
+            else:
+                direction = np.mod(direction,2)
+                fire = int(direction/2)
+
+            # perturb fire
+            if np.random.rand() < self.eps:
+                fire = np.random.choice([0, 1])
+
+            # perturb direction
+            if np.random.rand() < self.eps:
+                direction = np.random.choice(self.directions)
+
+            # assembly the action
+            if direction == -1:
+                action_ = fire
+            else:
+                action_ = direction + 2 * fire + 2
+
+        elif self.action_space_n == 3:
             if np.random.rand() < self.eps:
                 action = np.random.choice(self.directions)
             if action == 0:

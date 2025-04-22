@@ -86,6 +86,15 @@ class Agent():
             else:
                 return self.online_net(state.unsqueeze(0)).argmax(1).item()
 
+    def act_taskswitch(self, state):
+        with torch.no_grad():
+            if self.model in ('DistributionalDQN', 'Rainbow'):
+                q = self.online_net(state.unsqueeze(0))
+                q = (q * self.support).sum(2)
+                return q.argmax(1).item()
+            else:
+                q = self.online_net(state.unsqueeze(0))
+                return q.argmax(1).item()
     def act_e_greedy_lr(self, state, epsilon=1.0):  # High ε can reduce evaluation scores drastically
         return np.random.randint(0, self.action_space) if np.random.random() < epsilon else self.act(state)
 

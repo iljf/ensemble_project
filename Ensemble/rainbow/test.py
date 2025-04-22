@@ -106,6 +106,100 @@ def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False, scheduler=
             # Return average reward and Q-value
         return avg_reward, avg_Q
 
+def test_taskswitch(args, T, dqn, val_mem, metrics, results_dir, evaluate=False, scheduler=None, action_p=None):
+    env = Env(args)
+    env = Rewardvalue(env)
+    env = Action_random(env, eps=0.1)
+    env.eval()
+    metrics['steps'].append(T)
+    T_rewards, T_Qs = [], []
+
+    env.eps = env.eps
+    env.env.reward_mode = env.env.reward_mode
+
+    # Test performance over several episodes
+    done = True
+
+    if args.evaluate:
+        n_episodes = 100
+        for episode_num in range(n_episodes):
+            reward_mode = scheduler
+            action_probs = action_p
+            env.env.reward_mode = reward_mode
+            env.eps = action_probs
+
+        for _ in range(n_episodes):
+            print(f"Running episode {_ + 1}/{n_episodes} for model: {args.model_name}, block_id: {args.block_id}")
+            while True:
+                if done:
+                    state, reward_sum, done = env.reset(), 0, False
+                action = dqn.act_e_greedy(state)  # Choose an action ε-greedily
+                action = max(min(action, env.action_space() - 1), 0)
+                state, reward, done = env.step(action)  # Step
+                reward_sum += reward
+                if args.render:
+                    env.render()
+                if done:
+                    T_rewards.append(reward_sum)
+                    break
+        env.close()
+
+        # Test Q-values over validation memory
+        for state in val_mem:  # Iterate over valid states
+            T_Qs.append(dqn.evaluate_q(state))
+
+        avg_reward, avg_Q = sum(T_rewards) / len(T_rewards), sum(T_Qs) / len(T_Qs)
+        print(f"model: {args.model_name}, block_id: {args.block_id}, avg_r: {avg_reward}, avg_q: {avg_Q}")
+
+            # Return average reward and Q-value
+        return avg_reward, avg_Q
+
+    else:
+        for episode_num in range(args.evaluation_episodes):
+            reward_mode = scheduler
+            action_probs = action_p
+            env.env.reward_mode = reward_mode
+            env.eps = action_probs
+
+        for _ in range(args.evaluation_episodes):
+            while True:
+                if done:
+                    state, reward_sum, done = env.reset(), 0, False
+                action = dqn.act_e_greedy(state)  # Choose an action ε-greedily
+                action = max(min(action, env.action_space() - 1), 0)
+                state, reward, done = env.step(action)  # Step
+                reward_sum += reward
+                if args.render:
+                    env.render()
+                if done:
+                    T_rewards.append(reward_sum)
+                    break
+        env.close()
+
+        # Test Q-values over validation memory
+        for state in val_mem:  # Iterate over valid states
+            T_Qs.append(dqn.evaluate_q(state))
+
+        avg_reward, avg_Q = sum(T_rewards) / len(T_rewards), sum(T_Qs) / len(T_Qs)
+
+        if not evaluate:
+            # Save model parameters if improved
+            if avg_reward > metrics['best_avg_reward']:
+                metrics['best_avg_reward'] = avg_reward
+                dqn.save(results_dir, name=f'{args.block_id}_model.pth')
+
+            # Append to results and save metrics
+            metrics['rewards'].append(T_rewards)
+            metrics['Qs'].append(T_Qs)
+            torch.save(metrics, os.path.join(results_dir, f'{args.block_id}_metrics.pth'))
+
+            # Plot
+            _plot_line(metrics['steps'], metrics['rewards'], f'{args.block_id}_Reward', path=results_dir)
+            _plot_line(metrics['steps'], metrics['Qs'], f'{args.block_id}_Q', path=results_dir)
+
+            # Return average reward and Q-value
+        return avg_reward, avg_Q
+
 def ensemble_test(args, T, dqn, val_mem, metrics, results_dir, num_ensemble, evaluate=False, scheduler=None, action_p=None):
     env = Env(args)
     env = Rewardvalue(env)

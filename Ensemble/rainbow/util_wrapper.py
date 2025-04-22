@@ -821,6 +821,8 @@ class Rewardvalue(gym.Wrapper):
             else:  # 0
                 return obs, reward, done
 
+        if self.env.env_name == 'space_invaders':
+            return obs, reward, done
 
 class Action_random(gym.ActionWrapper):
     def __init__(self, env, eps=0.1):

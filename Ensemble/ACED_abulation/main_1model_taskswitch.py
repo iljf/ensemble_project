@@ -13,11 +13,14 @@ import torch
 from tqdm import trange
 
 from agent import Agent
-from env_taskswitch import Env
+from env import Env
 from memory import ReplayMemory
-from test import ensemble_test, ensemble_test_taskswitch
+from test import ensemble_test
 from util_wrapper import *
 import torch.nn.functional as F
+
+
+
 
 def global_seed_initailizer(seed):
     # random seed for numpy
@@ -27,55 +30,105 @@ def global_seed_initailizer(seed):
     # random seed for torch.cuda
     torch.cuda.manual_seed(seed)
 
-
-def predefined_scheduler_taskswitch(schedule_mode=1, action_prob_set = None, min_max_action_prob = [0.1, 0.9], max_length = 5000000, numstep_task = 500000, debug = False):
-
-        # if env_name == 'breakout':
-        #     reward_mode_info = {0: 'default', 1: 'reverse reward'}
-        # elif env_name == 'freeway':
-        #     reward_mode_info = {0: 'default', 1: 'negative reward for mistakes'}
-        # elif env_name == 'space_invaders':
-        #     reward_mode_info = {0: 'default', 1: 'kill gopher'}
-
+def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_set = None, min_max_action_prob = [0.1, 0.9], debug = False):
+        if env_name == 'road_runner':
+            # there are two rewarding modes: 0: default, 1: kill koyote
+            reward_mode_info = {0: 'default', 1: 'kill_koyote'}
+        elif env_name == 'frostbite':
+            # there are two rewarding modes: 0: default, 1: collect_fish
+            reward_mode_info = {0: 'default', 1: 'jumb_forever'}
+        elif env_name == 'crazy_climber':
+            # there are two rewarding modes: 0: default, 1: get_hit
+            reward_mode_info = {0: 'default', 1: 'get_hit'}
+        elif env_name == 'jamesbond':
+            # there are two rewarding modes: 0: default, 1:
+            reward_mode_info = {0: 'default', 1: 'dodge_everything'}
+        elif env_name == 'kangaroo':
+            reward_mode_info = {0: 'default', 1: 'punch_monkeys'}
+        elif env_name == 'chopper_command':
+            reward_mode_info = {0: 'default', 1: 'ignore jets'}
+        elif env_name == 'bank_heist':
+            reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'assault':
+            reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'krull':
+            reward_mode_info = {0: 'default', 1: 'car persuit'}
+        elif env_name == 'alien':
+            reward_mode_info = {0: 'default', 1: 'track aliens'}
+        elif env_name == 'asterix':
+            reward_mode_info = {0: 'default', 1: 'objective reward decline'}
         # if action_prob_set is None:
         #     action_prob_set = np.random.rand(4) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
         # last iterations to be 0
+        if action_prob_set is None:
+            action_prob_set = np.random.rand(3) * (min_max_action_prob[1] - min_max_action_prob[0]) + min_max_action_prob[0]
 
-        reward_mode_schedule = np.repeat(0, max_length)
-        action_prob_seed_schedule = np.repeat(0, max_length)
+        else:
+            if len(action_prob_set) != 4:
+                raise ValueError('action_prob_set should be of length 4')
 
-        Envs= ['road_runner', 'freeway', 'space_invaders']
 
-        num_env = max_length // numstep_task
-        # randind for num_env
+        """
+        reward mode sampling 할때 마지막 400k 에서 500k를 0으로 세팅 할때
+        rand_cond_seed = np.append(rand_cond_seed, 0) 으로 뒤에 0을 하나더 넣어줌   
+        """
 
-        # do not repeat the same env in a row
-        randind = []
-        for i in range(num_env):
-            while True:
-                idx = np.random.randint(0, len(Envs))
-                if i == 0 or idx != randind[-1]:
-                    randind.append(idx)
-                    break
+        ## reward mode schedule
+        # mix the predefined reward modes
+        rand_cond_seed = [[j for _ in range((5-1)//len(reward_mode_info.keys()))] for j in range(len(reward_mode_info.keys()))]
+        rand_cond_seed = np.array(rand_cond_seed).flatten()
 
-        Envs2out = []
-        for i in range(num_env):
-            # remeat 500000 times
-            Envs2out.extend([Envs[randind[i]]]*numstep_task)
+        # random shuffle of the predefined reward modes
+        np.random.shuffle(rand_cond_seed)
+        rand_cond_seed = np.append(0, rand_cond_seed)
+        # repeat each of them 100k times
+        reward_mode_schedule = np.repeat(rand_cond_seed, 200000)
+        # overide the last block to be 1
+        reward_mode_schedule[-200000:] = 1
 
-        return reward_mode_schedule, action_prob_seed_schedule, Envs2out
+        # TODO check the code;
+        # repeat by 100k times till 400k
+        # num_repeats= 4
+        # reward_mode_seed = (rand_cond_seed * num_repeats)
+        # reward_mode_schedule = np.repeat(reward_mode_seed, 100000)
+
+        ## action probability schedule # continuous / discrete
+        if schedule_mode % 2 == 0: # if schedule_mode is 0 ,2,4 ,6 then discrete
+            action_prob_seed = np.array(action_prob_set)
+            # random shuffle of the predefined reward modes
+            np.random.shuffle(action_prob_seed)
+            action_prob_seed = np.append(0, action_prob_seed)
+            action_prob_seed = np.round(action_prob_seed, 1)  # round to 1 decimal (e.g. 0.1, 0.5)
+            # last 100k to be 0
+            action_prob_seed = np.append(action_prob_seed, 0)
+            # repeat each of them 100k times
+
+            action_prob_seed_schedule = np.repeat(action_prob_seed, 200000)
+
+            # TODO check the code;
+            # repeat by 100k times till 400k
+            # action_mode_seed = (action_prob_seed * num_repeats)
+            # action_prob_seed_schedule = np.repeat(action_mode_seed, 100000)
+
+        else: # if schedule_mode is 1,3,5,7 then continuous
+            action_prob_seed_schedule = np.random.rand(200000)/5 # TODO
+            # or sine wave - alike + np.random.randn(500000)/10
+
+        return reward_mode_schedule, action_prob_seed_schedule, reward_mode_info
+
 
 if __name__ == '__main__':
 
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='ACED', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='ACED_mono', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
-    parser.add_argument('--iteration', type=int, default=2, help='Number of iteration')
+    parser.add_argument('--iteration', type=int, default=1, help='Number of iteration')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='space_invaders', choices=atari_py.list_games(), help='ATARI game')
-    parser.add_argument('--T-max', type=int, default=int(1.4e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
+    parser.add_argument('--game', type=str, default='bank_heist', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--model-name', type=str, default='Rainbow',help='network')
+    parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
     parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
@@ -98,9 +151,8 @@ if __name__ == '__main__':
     parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
     parser.add_argument('--batch-size', type=int, default=32, metavar='SIZE', help='Batch size')
     parser.add_argument('--learn-start', type=int, default=int(80000), metavar='STEPS', help='Number of steps before starting training')
-    # parser.add_argument('--learn-start', type=int, default=int(1000), metavar='STEPS', help='Number of steps before starting training')
     parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
-    parser.add_argument('--evaluation-interval', type=int, default=5000000, metavar='STEPS', help='Number of training steps between evaluations')
+    parser.add_argument('--evaluation-interval', type=int, default=5000, metavar='STEPS', help='Number of training steps between evaluations')
     parser.add_argument('--evaluation-episodes', type=int, default=10, metavar='N', help='Number of evaluation episodes to average over')
     # TODO: Note that DeepMind's evaluation method is running the latest agent for 500K frames ever every 1M steps
     parser.add_argument('--evaluation-size', type=int, default=500, metavar='N', help='Number of transitions to use for validating Q')
@@ -126,9 +178,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # wandb intialize
-    if args.id == 'ACED':
-        wandb.init(project="taskswitch",
-                   name="ACED_" + "taskswitch" + " " + "Seed" + str(args.seed) + "_i_" + str(args.iteration),
+    if args.id == 'ACED_mono':
+        wandb.init(project="block_rb",
+                   name="ACED_" + args.model_name + "_" + args.game + "_" + "Seed" + str(args.seed) + "_i_" + str(args.iteration),
                    config=args.__dict__
                    )
 
@@ -137,7 +189,7 @@ if __name__ == '__main__':
         print(' ' * 26 + k + ': ' + str(v))
 
     # exp name
-    exp_name = "taskswitch_" + args.id + '/' + args.game
+    exp_name = args.id + '/' + args.game
     exp_name += '/Beta_' + str(args.beta_mean) + '_T_' + str(args.temperature)
     exp_name +='_UCB_I_' + str(args.ucb_infer) + '_UCB_T_' + str(args.ucb_train) + '/'
     exp_name += '/seed_' + str(args.seed) + '/'
@@ -189,11 +241,14 @@ if __name__ == '__main__':
     # Agent
     dqn_list = []
 
-    models = ['DQN', 'DDQN', 'NoisyDQN', 'DuelingDQN', 'DistributionalDQN']
+    #TODO: Diverse models
+    # args.num_ensemble 수 만큼 agent를 생성하고 i % len(models) 만큼 할당
+    # Each agent with diff models
+    # agnet idx 0: DQN, 1: DDQN, 2: NoisyDQN, 3: DuelingDQN, 4: DistributionalDQN
+
     for i in range(args.num_ensemble):
-        model = models[i % len(models)]
+        model = args.model_name
         dqn = Agent(args, env, model) ## shared replay memory
-        # dqn = Agent(args, env, model, ReplayMemory(args, args.memory_capacity, args.beta_mean, args.num_ensemble)) ## for individual replay memory
         dqn_list.append(dqn)
 
     # If a model is provided, and evaluate is false, presumably we want to resume, so try to load memory
@@ -210,8 +265,7 @@ if __name__ == '__main__':
 
     # scheduler
     global_seed_initailizer(args.seed)
-    reward_mode_, action_probs_, Envs_ = predefined_scheduler_taskswitch(args.scheduler_mode, min_max_action_prob = [args.action_prob_min, args.action_prob_max], numstep_task=200000)
-
+    reward_mode_, action_probs_, info = predefined_scheduler(args.scheduler_mode, args.game, min_max_action_prob = [args.action_prob_min, args.action_prob_max])
     if args.block_id < 5:
         block_id = args.block_id # 0 = 0~100k, 1 = 100k~200k, 2 = 200k~300k
         reward_mode_, action_probs_ = reward_mode_[(block_id)*int(2e5):(block_id+1)*int(2e5)], action_probs_[(block_id)*int(2e5):(block_id+1)*int(2e5)]
@@ -233,7 +287,7 @@ if __name__ == '__main__':
             dqn_list[en_index].eval()
 
         # KM: test code
-        avg_reward, avg_Q = ensemble_test_taskswitch(args, 0, dqn_list, val_mem, metrics, results_dir,
+        avg_reward, avg_Q = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
                                           num_ensemble=args.num_ensemble, evaluate=True)  # Test
         print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
     else:
@@ -245,7 +299,6 @@ if __name__ == '__main__':
 
         reliability = torch.ones(args.num_ensemble, device=args.device) / args.num_ensemble
         while T < args.learn_start:
-            # for if 500k exceeds
             if T % 10000 ==0:
                 print(f"Running memory: {T}/{args.learn_start} for game: {args.game}")
             env.eps = action_probs_[T]
@@ -257,7 +310,8 @@ if __name__ == '__main__':
                 state, done = env.reset(), False
 
             if T % args.replay_frequency == 0:
-                dqn.reset_noise()
+                for en_index in range(args.num_ensemble):
+                    dqn.reset_noise()
 
             # arbitration control
             if args.ucb_infer == 0:
@@ -267,9 +321,9 @@ if __name__ == '__main__':
                 Q_list = []
                 for en_index in range(args.num_ensemble):
                     online_Q, action = dqn_list[en_index].act_v2(state)
-                    #TODO: clipping
                     Q_list.append(online_Q)
                     action_Qlist.append(action)
+
 
 
                 Q_tot = sum(Q_list[i] * reliability[i] for i in range(len(Q_list)))
@@ -346,16 +400,6 @@ if __name__ == '__main__':
         reliability = torch.ones(args.num_ensemble, device=args.device) / args.num_ensemble
         # Set reward mode, action prob according to the schedule
         for T in trange(1, args.T_max + 1):
-            game_bf = args.game
-            args.game = Envs_[T-1]
-            game_af = args.game
-            if game_bf != game_af:
-                env = Env(args)
-                env = Rewardvalue(env)
-                env = Action_random(env, eps=0.1)
-                env.train()
-                for en_index in range(args.num_ensemble):
-                    dqn_list[en_index].action_space = env.action_space()
             env.eps = action_probs_[T-1]
             env.env.reward_mode = reward_mode_[T-1]
             action_p = env.eps
@@ -366,7 +410,8 @@ if __name__ == '__main__':
                 # selected_en_index = np.random.randint(args.num_ensemble)
 
             if T % args.replay_frequency == 0:
-                dqn.reset_noise()
+                for en_index in range(args.num_ensemble):
+                    dqn.reset_noise()
 
             if args.ucb_infer == 0:
                 online_Qlist = []
@@ -377,7 +422,6 @@ if __name__ == '__main__':
                     online_Q, action = dqn_list[en_index].act_v2(state)
                     Q_list.append(online_Q)
                     action_Qlist.append(action)
-                    # TODO: clipping
 
 
                 Q_tot = sum(Q_list[i] * reliability[i] for i in range(len(Q_list)))
@@ -388,7 +432,6 @@ if __name__ == '__main__':
 
                 mse_list = []
                 for en_index in range(args.num_ensemble):
-                    # TODO: clipping
                     online_Q = Q_list[en_index][0, action]
                     target_Q = dqn_list[en_index].get_target_q_mse(next_state)
                     target_Q = reward + (nonterminal * args.discount * target_Q)
@@ -418,7 +461,6 @@ if __name__ == '__main__':
                 mean_Q, var_Q = None, None
                 L_target_Q = []
                 for en_index in range(args.num_ensemble):
-                    # TODO: clipping
                     target_Q = dqn_list[en_index].get_online_q(state)
                     L_target_Q.append(target_Q)
                     if en_index == 0:
@@ -438,8 +480,7 @@ if __name__ == '__main__':
                 action = ucb_score.argmax(1)[0].item()
             if args.ucb_infer == -1:
                 action = dqn_list[selected_en_index].act(state)  # Choose an action greedily (with noisy weights)
-                # TODO: clipping
-            action = max(min(action, env.action_space() - 1), 0)
+
             next_state, reward, done = env.step(action)  # Step
             # scheduler.update(T)
 
@@ -456,12 +497,11 @@ if __name__ == '__main__':
 
                 q_loss_tot = 0
                 idx_tot = []
-
                 exps = mem.sample(args.batch_size, args.energy_temperature)
                 for en_index, exp in enumerate(exps):
                     probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals, masks, weights = exp
                     idx_tot.append(tree_idxs)
-                    q_loss, batch_loss, CE_loss, transition_loss = dqn_list[en_index].diversity_learn(idxs, states, actions, returns,
+                    q_loss, batch_loss, transition_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
                                                                next_states, nonterminals, masks[:, en_index],
                                                                weights, None)
 
@@ -492,7 +532,7 @@ if __name__ == '__main__':
             if T % args.evaluation_interval == 0:
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = ensemble_test_taskswitch(args, T, dqn_list, val_mem, metrics, results_dir,
+                avg_reward, avg_Q = ensemble_test(args, T, dqn_list, val_mem, metrics, results_dir,
                                                   num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
 
@@ -505,13 +545,12 @@ if __name__ == '__main__':
                                'eval/reward': reward,
                                'eval/Average_reward': avg_reward,
                                'eval/timestep': T,
-                               'reliability/DQN': reliability[0],
-                               'reliability/DDQN': reliability[1],
-                               'reliability/Nosiy_DQN': reliability[2],
-                               'reliability/Dueling_DQN': reliability[3],
-                               'reliability/Distirbutional_DQN': reliability[4],
+                               'reliability/agent0': reliability[0],
+                               'reliability/agent1': reliability[1],
+                               'reliability/agent2': reliability[2],
+                               'reliability/agent3': reliability[3],
+                               'reliability/agent4': reliability[4],
                                'Q-value/Q-value': avg_Q,
-                               'Q-value/CE-loss': CE_loss,
                                'Q-value/batch-loss': batch_loss,
                                },step=T)
 

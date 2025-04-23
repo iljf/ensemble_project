@@ -388,7 +388,7 @@ if __name__ == '__main__':
 
                 for en_index in range(args.num_ensemble):
                     # Train with n-step distributional double-Q learning
-                    q_loss, batch_loss = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
+                    q_loss, batch_loss, mse = dqn_list[en_index].ensemble_learn(idxs, states, actions, returns,
                                                                next_states, nonterminals, weights,
                                                                masks[:, en_index], weight_Q)
                     if en_index == 0:

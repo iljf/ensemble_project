@@ -74,9 +74,9 @@ def predefined_scheduler(schedule_mode=1, env_name = 'road_runner', action_prob_
             reward_mode_info = {0: 'default', 1: 'kill gopher'}
         elif env_name == 'hero':
             reward_mode_info = {0: 'default', 1: 'use all dynamites'}
-        elif env_name == 'kungfu_master':
+        elif env_name == 'kung_fu_master':
             reward_mode_info = {0: 'default', 1: 'use more kicks'}
-        elif env_name == 'mspacman':
+        elif env_name == 'ms_pacman':
             reward_mode_info = {0: 'default', 1: 'collect fruits and ghosts'}
         elif env_name == 'pong':
             reward_mode_info = {0: 'default', 1: 'half the point for player'}
@@ -155,11 +155,11 @@ if __name__ == '__main__':
 
     # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument('--id', type=str, default='ACED_mse', help='Experiment ID')
+    parser.add_argument('--id', type=str, default='ACED_infer_AC', help='Experiment ID')
     parser.add_argument('--seed', type=int, default=122, help='Random seed')
-    parser.add_argument('--iteration', type=int, default=0, help='Number of iteration')
+    parser.add_argument('--iteration', type=int, default=2, help='Number of iteration')
     parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-    parser.add_argument('--game', type=str, default='alien', choices=atari_py.list_games(), help='ATARI game')
+    parser.add_argument('--game', type=str, default='assault', choices=atari_py.list_games(), help='ATARI game')
     parser.add_argument('--T-max', type=int, default=int(1e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
     parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
     parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('--action-prob-max', type=float, default=0.5, help='max action probability')
     parser.add_argument('--action-prob-min', type=float, default=0.1, help='min action probability')
     parser.add_argument('--block-id', type=int, default=0, help='testing schedule block')
-    parser.add_argument('--permutation', type=int, default=3, help='testing permutation')
+    parser.add_argument('--permutation', type=int, default=0, help='0 for original, 1 for average, 2 for random, 3 for mse')
 
     # Setup
     args = parser.parse_args()
@@ -215,6 +215,11 @@ if __name__ == '__main__':
     # if args.id == 'ACED':
     #     wandb.init(project="block_rb",
     #                name="ACED_" + args.game + " " + "Seed" + str(args.seed) + "_i_" + str(args.iteration),
+    #                config=args.__dict__
+    #                )
+    # if args.id == 'ACED_infer_AC':
+    #     wandb.init(project="ACED_R_mse",
+    #                name="ACED_" + args.game,
     #                config=args.__dict__
     #                )
 
@@ -381,7 +386,7 @@ if __name__ == '__main__':
                 df_sampled, counts = memory_agent_sampling(mse_log, block_id, temperature=args.energy_temperature)
                 all_sampled_results.append(df_sampled)
             else:
-                avg_reward, avg_Q, episode_reward = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
+                avg_reward, avg_Q, episode_reward, ep_reliability, T_mse = ensemble_test(args, 0, dqn_list, val_mem, metrics, results_dir,
                                                   num_ensemble=args.num_ensemble, scheduler=scheduler, action_p=action_p, evaluate=True, memory=mem)  # Test
                 print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
 
@@ -390,7 +395,9 @@ if __name__ == '__main__':
                         "block_id": block_id,
                         "episode": ep_idx,
                         "reward": r,
-                        "avg_reward": avg_reward
+                        "avg_reward": avg_reward,
+                        "reliability" : ep_reliability[ep_idx],
+                        "mse" : T_mse[ep_idx]
                     })
 
         directory = args.id + '/' + args.game
@@ -437,8 +444,6 @@ if __name__ == '__main__':
                     online_Q, action = dqn_list[en_index].act_v2(state)
                     Q_list.append(online_Q)
                     action_Qlist.append(action)
-
-
 
                 Q_tot = sum(Q_list[i] * reliability[i] for i in range(len(Q_list)))
                 action = Q_tot.argmax().item()
@@ -654,20 +659,20 @@ if __name__ == '__main__':
                 for en_index in range(args.num_ensemble):
                     dqn_list[en_index].train()  # Set DQN (online network) back to training mode
 
-                    wandb.log({'eval/reward_mode': reward_mode_[T-1],
-                               'eval/action_prob': action_probs_[T-1],
-                               'eval/reward': reward,
-                               'eval/Average_reward': avg_reward,
-                               'eval/timestep': T,
-                               'reliability/DQN': reliability[0],
-                               'reliability/DDQN': reliability[1],
-                               'reliability/Nosiy_DQN': reliability[2],
-                               'reliability/Dueling_DQN': reliability[3],
-                               'reliability/Distirbutional_DQN': reliability[4],
-                               'Q-value/Q-value': avg_Q,
-                               'Q-value/CE-loss': CE_loss,
-                               'Q-value/batch-loss': batch_loss,
-                               },step=T)
+                    # wandb.log({'eval/reward_mode': reward_mode_[T-1],
+                    #            'eval/action_prob': action_probs_[T-1],
+                    #            'eval/reward': reward,
+                    #            'eval/Average_reward': avg_reward,
+                    #            'eval/timestep': T,
+                    #            'reliability/DQN': reliability[0],
+                    #            'reliability/DDQN': reliability[1],
+                    #            'reliability/Nosiy_DQN': reliability[2],
+                    #            'reliability/Dueling_DQN': reliability[3],
+                    #            'reliability/Distirbutional_DQN': reliability[4],
+                    #            'Q-value/Q-value': avg_Q,
+                    #            'Q-value/CE-loss': CE_loss,
+                    #            'Q-value/batch-loss': batch_loss,
+                    #            },step=T)
 
                 # If memory path provided, save it
                 if args.memory is not None:
